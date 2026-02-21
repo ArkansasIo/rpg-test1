@@ -1,0 +1,16 @@
+# zones.inf
+# Format: id, name, biome, dungeon, difficulty, world_tier, enemy_scaling, loot_scaling, description
+# Example: 1, "Forest of Dawn", "Forest", "None", 1, 1, 1.0, 1.0, "A lush forest with gentle monsters."
+
+# Auto-generated zones, biomes, dungeons
+# Format: id, name, biome, dungeon, difficulty, world_tier, enemy_scaling, loot_scaling, description
+1, "Forest of Dawn", "Forest", "None", 1, 1, 1.0, 1.0, "A lush forest with gentle monsters."
+2, "Cavern of Echoes", "Cave", "Goblin Hideout", 2, 1, 1.2, 1.0, "A dark cave filled with the sounds of goblin chatter."
+3, "Mountain Peak", "Mountain", "None", 3, 2, 1.5, 1.0, "A high mountain area with a breathtaking view."
+4, "Desert of Desolation", "Desert", "None", 4, 2, 1.7, 1.0, "A vast desert with scarce resources and extreme temperatures."
+5, "Swamp of Sorrows", "Swamp", "None", 5, 3, 2.0, 1.0, "A murky swamp filled with dangerous creatures."
+6, "Plains of Wrath", "Plains", "Bandit Camp", 2, 1, 1.3, 1.0, "Open plains that are home to roving bands of marauders."
+7, "Tundra of Torment", "Tundra", "Ice Cave", 3, 2, 1.6, 1.0, "A frozen wasteland with hidden ice caves."
+8, "Volcano of Vengeance", "Volcano", "Fire Temple", 5, 3, 2.2, 1.0, "A fiery volcano with a temple dedicated to the fire gods."
+9, "Jungle of Jinx", "Jungle", "None", 4, 2, 1.8, 1.0, "A dense jungle filled with ancient ruins and traps."
+10, "City of Gold", "Urban", "None", 5, 3, 2.5, 1.0, "A legendary city said to be built entirely of gold."

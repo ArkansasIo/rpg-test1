@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build JavaDragonQuest1",
+			"type": "shell",
+			"command": "javac -d build/classes src/dq1/*.java src/main/*.java",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
