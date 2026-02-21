@@ -1,9 +1,9 @@
-s adn classpackage dq1.core;
+package dq1.core;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Quest system for RPG.

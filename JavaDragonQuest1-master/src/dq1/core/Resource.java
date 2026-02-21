@@ -575,8 +575,7 @@ public class Resource {
             while ((line = br.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty() 
-                        || line.startsWith("#") || line.startsWith(";")) {
-                    
+                        || line.startsWith("#") || line.startsWith(";") || line.startsWith("//")) {
                     continue;
                 }
                 Enemy enemy = new Enemy(line);

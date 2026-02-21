@@ -37,24 +37,27 @@ public class Enemy {
     
     public Enemy(String serializedData) {
         String[] args = serializedData.trim().split(",");
-        
-        id = Integer.parseInt(args[0].trim(), 16);
-        name = args[1].trim();
-        str = Integer.parseInt(args[2].trim(), 16);
-        agi = Integer.parseInt(args[3].trim(), 16);
-        hpMax = Integer.parseInt(args[4].trim(), 16);
-        pat = Integer.parseInt(args[5].trim(), 16);
-        sr = Integer.parseInt(args[6].trim(), 16);
-        dr = Integer.parseInt(args[7].trim(), 16);
-        xp = Integer.parseInt(args[8].trim(), 16);
-        gpMax = Integer.parseInt(args[9].trim(), 16);
-        groupId = Integer.parseInt(args[10].trim(), 16);
-        finalBoss = Boolean.parseBoolean(args[11].trim());
-        type = args.length > 12 ? args[12].trim() : "Normal";
-        monsterClass = args.length > 13 ? args[13].trim() : "Basic";
-        attribute = args.length > 14 ? args[14].trim() : "None";
-        subtype = args.length > 15 ? args[15].trim() : "None";
-        subStat = args.length > 16 ? Integer.parseInt(args[16].trim()) : 0;
+        try {
+            id = Integer.parseInt(args[0].trim(), 16);
+            name = args[1].trim();
+            str = Integer.parseInt(args[2].trim(), 16);
+            agi = Integer.parseInt(args[3].trim(), 16);
+            hpMax = Integer.parseInt(args[4].trim(), 16);
+            pat = Integer.parseInt(args[5].trim(), 16);
+            sr = Integer.parseInt(args[6].trim(), 16);
+            dr = Integer.parseInt(args[7].trim(), 16);
+            xp = Integer.parseInt(args[8].trim(), 16);
+            gpMax = Integer.parseInt(args[9].trim(), 16);
+            groupId = Integer.parseInt(args[10].trim(), 16);
+            finalBoss = Boolean.parseBoolean(args[11].trim());
+            type = args.length > 12 ? args[12].trim() : "Normal";
+            monsterClass = args.length > 13 ? args[13].trim() : "Basic";
+            attribute = args.length > 14 ? args[14].trim() : "None";
+            subtype = args.length > 15 ? args[15].trim() : "None";
+            subStat = args.length > 16 ? Integer.parseInt(args[16].trim()) : 0;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid enemy data: " + serializedData, e);
+        }
         statusASleep = false;
         statusASleepTurn = 0;
         statusStopSpell = false;
