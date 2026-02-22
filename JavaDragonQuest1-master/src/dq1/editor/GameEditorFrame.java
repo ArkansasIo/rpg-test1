@@ -29,6 +29,10 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.JToolBar;
+import javax.swing.JToggleButton;
+import javax.swing.JTextField;
+import javax.swing.JOptionPane;
 import dq1.editor.panels.ContentBrowserPanel;
 import dq1.editor.panels.WorldOutlinerPanel;
 import dq1.editor.panels.InspectorPanelStub;
@@ -95,6 +99,8 @@ public class GameEditorFrame extends JFrame {
         setLayout(new BorderLayout());
 
         setJMenuBar(buildMenuBar());
++        // Add Unreal-style top toolbar (below the menu bar)
++        add(buildToolBar(), BorderLayout.NORTH);
         JTabbedPane mainTabs = buildMainTabs();
         add(mainTabs, BorderLayout.CENTER);
         installTabUndockHandler(mainTabs);
@@ -642,4 +648,73 @@ public class GameEditorFrame extends JFrame {
 -        mapCanvasPanel.refresh();
 +        mapCanvasPanel.repaint();
      }
++
++    // Build a compact Unreal-like toolbar for common editor actions
++    private JToolBar buildToolBar() {
++        JToolBar tb = new JToolBar();
++        tb.setFloatable(false);
++
++        JButton save = new JButton("Save");
++        save.addActionListener(e -> {
++            // Use buildProject as a proxy for Save/Package in this skeleton
++            String out = GameEditorRuntimeAPI.buildProject();
++            JOptionPane.showMessageDialog(this, "Build result:\n" + out, "Save/Build", JOptionPane.INFORMATION_MESSAGE);
++        });
++        tb.add(save);
++
++        JButton undoBtn = new JButton("Undo");
++        undoBtn.addActionListener(e -> {
++            try { mapCanvasPanel.undo(); } catch (Exception ex) { ex.printStackTrace(); }
++        });
++        tb.add(undoBtn);
++
++        JButton redoBtn = new JButton("Redo");
++        redoBtn.addActionListener(e -> {
++            try { mapCanvasPanel.redo(); } catch (Exception ex) { ex.printStackTrace(); }
++        });
++        tb.add(redoBtn);
++
++        tb.addSeparator();
++
++        JButton play = new JButton("Play");
++        play.addActionListener(e -> {
++            // Run the project in editor (Play In Editor)
++            GameEditorRuntimeAPI.runProject();
++        });
++        tb.add(play);
++
++        JButton simulate = new JButton("Simulate");
++        simulate.addActionListener(e -> JOptionPane.showMessageDialog(this, "Simulate (placeholder)"));
++        tb.add(simulate);
++
++        tb.addSeparator();
++
++        JToggleButton gridBtn = new JToggleButton("Grid", true);
++        gridBtn.addActionListener(e -> mapCanvasPanel.setShowGrid(gridBtn.isSelected()));
++        tb.add(gridBtn);
++
++        JToggleButton snapBtn = new JToggleButton("Snap", false);
++        snapBtn.addActionListener(e -> {
++            // For now just show status; future: wire snap to tools
++            JOptionPane.showMessageDialog(this, "Snap: " + snapBtn.isSelected());
++        });
++        tb.add(snapBtn);
++
++        tb.addSeparator();
++
++        tb.add(new JLabel("Layout:"));
++        JComboBox<String> layout = new JComboBox<>(new String[]{"Default", "2-Column", "Large-Preview"});
++        layout.addActionListener(e -> JOptionPane.showMessageDialog(this, "Switch layout: " + layout.getSelectedItem()));
++        tb.add(layout);
++
++        tb.addSeparator();
++
++        tb.add(new JLabel(" Search:"));
++        JTextField search = new JTextField();
++        search.setColumns(12);
++        search.addActionListener(e -> JOptionPane.showMessageDialog(this, "Search: " + search.getText()));
++        tb.add(search);
++
++        return tb;
++    }
  }
