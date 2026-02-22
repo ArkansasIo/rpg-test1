@@ -29,7 +29,7 @@ public class Main {
                 
                 JFrame frame = new JFrame();
                 frame.setIconImage(Resource.getImage("dq1"));
-                frame.setTitle("Dragon Quest 1 / Dragon Warrior 1");
+                frame.setTitle(GAME_TITLE + " (" + GAME_VERSION + ")");
                 frame.getContentPane().add(View.getCanvas());
                 frame.setResizable(false);
                 frame.pack();

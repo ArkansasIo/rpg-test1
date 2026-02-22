@@ -8,6 +8,9 @@ import java.awt.event.KeyEvent;
  * @author Leonardo Ono (ono.leo80@gmail.com)
  */
 public class Settings {
+
+    public static final String GAME_TITLE = "ELDRION LEGENDS";
+    public static final String GAME_VERSION = "0.9.0-alpha";
     
     // --- display ---
     

@@ -101,4 +101,44 @@ public final class FrameworkGameplayService {
         }
         return lines;
     }
+
+    public static List<String> simulatePvePvpBalanceLines() {
+        var profile = RpgSystems.getProfile();
+        var stats = profile.getTotalStats();
+
+        CombatResolver.HitResult pve = CombatResolver.resolveBasicHit(
+                stats.get(RpgAttribute.STRENGTH),
+                stats.get(RpgAttribute.AGILITY),
+                stats.get(RpgAttribute.CRIT_RATE) * 0.01,
+                1.20,
+                stats.get(RpgAttribute.DEFENSE) + 20,
+                0.10,
+                0.05,
+                profile.getLevel(),
+                PvpPveContext.PVE);
+
+        CombatResolver.HitResult pvp = CombatResolver.resolveBasicHit(
+                stats.get(RpgAttribute.STRENGTH),
+                stats.get(RpgAttribute.AGILITY),
+                stats.get(RpgAttribute.CRIT_RATE) * 0.01,
+                1.20,
+                stats.get(RpgAttribute.DEFENSE) + 20,
+                0.10,
+                0.05,
+                profile.getLevel(),
+                PvpPveContext.PVP);
+
+        List<String> lines = new ArrayList<>();
+        lines.add("PvE vs PvP Balance Preview");
+        lines.add("PvE raw=" + (int) pve.getRawDamage()
+                + " taken=" + (int) pve.getMitigatedDamage()
+                + " crit=" + (int) (pve.getCritChance() * 100) + "%");
+        lines.add("PvP raw=" + (int) pvp.getRawDamage()
+                + " taken=" + (int) pvp.getMitigatedDamage()
+                + " crit=" + (int) (pvp.getCritChance() * 100) + "%");
+        lines.add("PvP damage dampening active.");
+        lines.add("PvP crit cap: " + (int) (BalanceRules.critChanceCap(PvpPveContext.PVP) * 100) + "%");
+        lines.add("PvE crit cap: " + (int) (BalanceRules.critChanceCap(PvpPveContext.PVE) * 100) + "%");
+        return lines;
+    }
 }

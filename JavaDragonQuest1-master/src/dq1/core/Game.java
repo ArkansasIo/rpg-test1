@@ -8,6 +8,7 @@ import dq1.core.rpg.InventorySystem;
 import dq1.core.rpg.PlayerRpgProfile;
 import dq1.core.rpg.RpgActionResult;
 import dq1.core.rpg.RpgActionType;
+import dq1.core.rpg.RpgItemDefinition;
 import dq1.core.rpg.RpgRuntimeService;
 import dq1.core.rpg.RpgSystems;
 import dq1.core.wowui.WowPanelId;
@@ -65,7 +66,7 @@ public class Game {
     
     private static boolean running;
     private static TileMap currentMap;
-    private static State state = State.OL_PRESENTS;
+    private static State state = State.TITLE;
     private static TileMap newMap;
     private static boolean newMapUseFadeEffect;
     private static int playerNewRow;
@@ -120,7 +121,8 @@ public class Game {
 
     public static void start() throws Exception {
                 // Initialize game window and canvas
-                javax.swing.JFrame frame = new javax.swing.JFrame("Dragon Quest 1");
+                javax.swing.JFrame frame = new javax.swing.JFrame(
+                        Settings.GAME_TITLE + " (" + Settings.GAME_VERSION + ")");
                 frame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
                 frame.setResizable(false);
                 frame.add(View.getCanvas());
@@ -142,6 +144,12 @@ public class Game {
         Inventory.start();
         Quest.initializeWoWStoryIfNeeded();
         RpgSystems.bootstrap();
+        try {
+            WoWZoneSystem.loadFromInfAssets(Path.of("assets", "res", "inf"));
+        }
+        catch (Exception ignored) {
+            WoWZoneSystem.loadDefaults();
+        }
 
         //testStartSpecificMap();
         //testStartLoadingSavedGame();
@@ -226,47 +234,6 @@ public class Game {
     }
     
     private static void updateOLPresents() throws Exception {
-        if (showCustomSplashLogo()) {
-            state = TITLE;
-            return;
-        }
-        if (Settings.SKIP_INTRO_STORY) {
-            state = TITLE;
-            return;
-        }
-        OLPresents.reset();
-        Graphics2D g = View.getOffscreenGraphics2D(1);
-        OLPresents.update();
-        OLPresents.draw(g);
-        View.refresh();
-        if (waitSkippable(3000)) {
-            state = TITLE;
-            return;
-        }
-        startTime = System.currentTimeMillis();
-        while (OLPresents.update()) {
-            if (isSkipRequested()) {
-                state = TITLE;
-                return;
-            }
-            OLPresents.draw(g);
-            View.refresh();
-            sync30fps();
-        }
-        String presents = getText("@@presents");
-        for (int i = 0; i < presents.length(); i++) {
-            if (isSkipRequested()) {
-                state = TITLE;
-                return;
-            }
-            Dialog.print(1, 12 + i, 19, presents.charAt(i));
-            sleep(100);
-        }
-        if (waitSkippable(3000)) {
-            state = TITLE;
-            return;
-        }
-        View.fadeOut();
         state = TITLE;
     }
 
@@ -369,6 +336,7 @@ public class Game {
         }
         Audio.playSound(Audio.SOUND_SHOW_OPTIONS_MENU);
         View.showImage(1, "title", 0, -240);
+        drawMainTitleNameOverlay();
         Dialog.print(0, 0, getText("@@title_keyboard_1"));
         Dialog.print(0, 0, "");
         Dialog.print(0, 0, "");
@@ -382,6 +350,7 @@ public class Game {
         boolean exit = false;
         while (!exit) {
             View.showImage(1, "title", 0, -240);
+            drawMainTitleNameOverlay();
             String[] options = new String[] {
                 "New Game",
                 "Continue Game",
@@ -464,6 +433,16 @@ public class Game {
             }
         }
     }
+
+    private static void drawMainTitleNameOverlay() {
+        Graphics2D g = View.getOffscreenGraphics2D(1);
+        g.setFont(new Font("Serif", Font.BOLD, 16));
+        g.setColor(new Color(0, 0, 0, 170));
+        g.drawString(Settings.GAME_TITLE, 15, 22);
+        g.setColor(new Color(245, 225, 185));
+        g.drawString(Settings.GAME_TITLE, 14, 21);
+    }
+
     
     private static final KeyHandler KEY_HANDLER = new KeyHandler();
     private static final int PLAYER_NAME_MAX_LENGTH = 12;
@@ -1854,6 +1833,117 @@ public class Game {
         showWoWMapDialog();
     }
 
+    private static void showWoWWorldPanels() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Tile Map Catalog",
+                "Zone Browser",
+                "Graphical Map",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 8, 28, 6, -1, options);
+            switch (option) {
+                case 0:
+                    try {
+                        showWoWMapCatalog();
+                    }
+                    catch (Exception ex) {
+                        showSimplePanel("WOW WORLD MAP",
+                                List.of("Failed to open map catalog.",
+                                        ex.getMessage() == null ? "Unknown error." : ex.getMessage()));
+                    }
+                    break;
+                case 1:
+                    showWoWZoneBrowser();
+                    break;
+                case 2:
+                    showWoWMapGraphical();
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showWoWZoneBrowser() {
+        List<WoWZoneSystem.WoWZone> zones = WoWZoneSystem.zones;
+        if (zones.isEmpty()) {
+            showSimplePanel("WOW ZONES", List.of("No zones loaded."));
+            return;
+        }
+        boolean exit = false;
+        int page = 0;
+        final int pageSize = 8;
+        while (!exit) {
+            int totalPages = (zones.size() + pageSize - 1) / pageSize;
+            int start = page * pageSize;
+            int end = Math.min(start + pageSize, zones.size());
+
+            List<String> options = new ArrayList<>();
+            for (int i = start; i < end; i++) {
+                WoWZoneSystem.WoWZone z = zones.get(i);
+                options.add("#" + z.id + " " + z.name + " [" + z.continent + "]");
+            }
+            boolean hasPrev = page > 0;
+            boolean hasNext = page < totalPages - 1;
+            if (hasPrev) {
+                options.add("< Prev");
+            }
+            if (hasNext) {
+                options.add("Next >");
+            }
+            options.add("Back");
+
+            int selected = Dialog.showOptionsMenu(6, 6, 33, options.size() + 2
+                    , -1, options.toArray(new String[0]));
+            int countOnPage = end - start;
+            if (selected >= 0 && selected < countOnPage) {
+                showWoWZoneDetails(zones.get(start + selected));
+                continue;
+            }
+            int cursor = countOnPage;
+            if (hasPrev) {
+                if (selected == cursor) {
+                    page--;
+                    continue;
+                }
+                cursor++;
+            }
+            if (hasNext) {
+                if (selected == cursor) {
+                    page++;
+                    continue;
+                }
+                cursor++;
+            }
+            if (selected == cursor || selected == -1) {
+                exit = true;
+            }
+        }
+    }
+
+    private static void showWoWZoneDetails(WoWZoneSystem.WoWZone zone) {
+        List<String> lines = new ArrayList<>();
+        lines.add("Zone #" + zone.id + " " + zone.name);
+        lines.add("Continent: " + zone.continent);
+        lines.add("Biome: " + zone.biomeTitle);
+        lines.add("Tier: " + zone.worldTier + "  Difficulty: " + zone.difficulty);
+        lines.add("Scaling: E " + zone.enemyScaling + "  L " + zone.lootScaling);
+        if (zone.dungeon != null && !zone.dungeon.equalsIgnoreCase("none")) {
+            lines.add("Dungeon: " + zone.dungeon);
+        }
+        lines.add("Sub-zones: " + zone.subZones.size());
+        int maxSubs = Math.min(5, zone.subZones.size());
+        for (int i = 0; i < maxSubs; i++) {
+            WoWZoneSystem.WoWSubZone sub = zone.subZones.get(i);
+            lines.add("- #" + sub.id + " " + sub.name);
+        }
+        showSimplePanel("WOW ZONE DETAILS", lines);
+    }
+
     public static void showWoWUi() {
         boolean exit = false;
         while (!exit) {
@@ -1876,14 +1966,7 @@ public class Game {
                     showQuestMenu();
                     break;
                 case WORLD_MAP:
-                    try {
-                        showWoWMapCatalog();
-                    }
-                    catch (Exception ex) {
-                        showSimplePanel("WOW WORLD MAP",
-                                List.of("Failed to open map catalog.",
-                                        ex.getMessage() == null ? "Unknown error." : ex.getMessage()));
-                    }
+                    showWoWWorldPanels();
                     break;
                 case PARTY:
                     showPartyMenu();
@@ -1895,7 +1978,7 @@ public class Game {
                     showWoWKeybindPanel();
                     break;
                 case DIABLO_INVENTORY:
-                    SwingUtilities.invokeLater(() -> new DiabloInventoryFrame().setVisible(true));
+                    showDiabloIntegratedUi();
                     break;
                 case EXTERNAL_FRAME:
                     SwingUtilities.invokeLater(() -> new WowUiFrame().setVisible(true));
@@ -1918,10 +2001,11 @@ public class Game {
                 "RPG Runtime Actions",
                 "Fantasy Entity Catalog (600)",
                 "Combat Framework Demo",
+                "Talent Progression",
                 "Feature Coverage",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(9, 10, 30, 10, -1, options);
+            int option = Dialog.showOptionsMenu(9, 10, 30, 11, -1, options);
             switch (option) {
                 case 0:
                     showRpgCharacterSummary();
@@ -1942,9 +2026,12 @@ public class Game {
                     showCombatFrameworkDemoMenu();
                     break;
                 case 6:
-                    showFeatureCoverage();
+                    showTalentProgressionMenu();
                     break;
                 case 7:
+                    showFeatureCoverage();
+                    break;
+                case 8:
                 case -1:
                     exit = true;
                     break;
@@ -2022,6 +2109,132 @@ public class Game {
         lines.add("Confirm: " + keyName(Settings.KEY_CONFIRM));
         lines.add("Cancel: " + keyName(Settings.KEY_CANCEL));
         showSimplePanel(model.getTitle(), lines);
+    }
+
+    private static void showDiabloIntegratedUi() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Inventory Grid",
+                "Equipment Slots",
+                "Character Stats",
+                "Equip Item by Index",
+                "Use Consumable by Index",
+                "Auto Equip Best",
+                "Open External Diablo UI",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 8, 31, 10, -1, options);
+            switch (option) {
+                case 0:
+                    showDiabloInventoryGridPanel();
+                    break;
+                case 1:
+                    showSimplePanel("DIABLO EQUIPMENT", RpgSystems.buildEquipmentLines());
+                    break;
+                case 2:
+                    showSimplePanel("DIABLO STATS", RpgSystems.buildSummaryLines());
+                    break;
+                case 3:
+                    showDiabloEquipByIndex();
+                    break;
+                case 4:
+                    showDiabloUseByIndex();
+                    break;
+                case 5:
+                    showUiToast(RpgSystems.getRuntime().autoEquipBestLoadout().getMessage());
+                    break;
+                case 6:
+                    SwingUtilities.invokeLater(() -> new DiabloInventoryFrame().setVisible(true));
+                    break;
+                case 7:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showDiabloInventoryGridPanel() {
+        List<RpgItemDefinition> cells = buildExpandedInventoryCells(48);
+        List<String> lines = new ArrayList<>();
+        lines.add("Grid 8x6 (item index)");
+        for (int row = 0; row < 8; row++) {
+            StringBuilder sb = new StringBuilder();
+            for (int col = 0; col < 6; col++) {
+                int idx = row * 6 + col;
+                if (idx < cells.size()) {
+                    sb.append(String.format("%02d ", idx + 1));
+                }
+                else {
+                    sb.append("-- ");
+                }
+            }
+            lines.add(sb.toString().trim());
+        }
+        lines.add("Use index in action menu.");
+        showSimplePanel("DIABLO INVENTORY GRID", lines);
+    }
+
+    private static List<RpgItemDefinition> buildExpandedInventoryCells(int maxCells) {
+        List<RpgItemDefinition> cells = new ArrayList<>();
+        PlayerRpgProfile profile = RpgSystems.getProfile();
+        for (InventorySystem.InventoryEntry entry : profile.getInventory().getEntries()) {
+            for (int i = 0; i < entry.getQuantity(); i++) {
+                if (cells.size() >= maxCells) {
+                    return cells;
+                }
+                cells.add(entry.getDefinition());
+            }
+        }
+        return cells;
+    }
+
+    private static void showDiabloEquipByIndex() {
+        List<RpgItemDefinition> cells = buildExpandedInventoryCells(48);
+        if (cells.isEmpty()) {
+            showUiToast("Inventory is empty.");
+            return;
+        }
+        int selected = chooseInventoryIndex(cells, "Equip which item?");
+        if (selected < 0) {
+            return;
+        }
+        RpgItemDefinition item = cells.get(selected);
+        showUiToast(RpgSystems.getRuntime().equipFromInventory(item.getId()).getMessage());
+    }
+
+    private static void showDiabloUseByIndex() {
+        List<RpgItemDefinition> cells = buildExpandedInventoryCells(48);
+        if (cells.isEmpty()) {
+            showUiToast("Inventory is empty.");
+            return;
+        }
+        int selected = chooseInventoryIndex(cells, "Use which item?");
+        if (selected < 0) {
+            return;
+        }
+        RpgItemDefinition item = cells.get(selected);
+        showUiToast(RpgSystems.getRuntime().useConsumable(item.getId()).getMessage());
+    }
+
+    private static int chooseInventoryIndex(List<RpgItemDefinition> cells, String title) {
+        int maxOptions = Math.min(10, cells.size());
+        String[] options = new String[maxOptions + 1];
+        for (int i = 0; i < maxOptions; i++) {
+            RpgItemDefinition item = cells.get(i);
+            String name = item.getTypeName();
+            if (name.length() > 17) {
+                name = name.substring(0, 17);
+            }
+            options[i] = String.format("%02d %s", i + 1, name);
+        }
+        options[maxOptions] = "Back";
+        int choice = Dialog.showOptionsMenu(8, 8, 31, maxOptions + 3, -1, options);
+        if (choice < 0 || choice >= maxOptions) {
+            return -1;
+        }
+        return choice;
     }
 
     private static void showRpgRuntimeActions() {
@@ -2177,9 +2390,10 @@ public class Game {
                 "Formula Summary",
                 "Boss Scaling Simulation",
                 "Buff/Debuff DR Simulation",
+                "PvE vs PvP Balance",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(8, 9, 30, 6, -1, options);
+            int option = Dialog.showOptionsMenu(8, 9, 30, 7, -1, options);
             switch (option) {
                 case 0:
                     showSimplePanel("COMBAT FORMULAS",
@@ -2194,11 +2408,109 @@ public class Game {
                             FrameworkGameplayService.simulateEffectEngineLines());
                     break;
                 case 3:
+                    showSimplePanel("PVE VS PVP",
+                            FrameworkGameplayService.simulatePvePvpBalanceLines());
+                    break;
+                case 4:
                 case -1:
                     exit = true;
                     break;
             }
         }
+    }
+
+    private static void showTalentProgressionMenu() {
+        boolean exit = false;
+        int playerId = 1;
+        while (!exit) {
+            java.util.Set<Integer> owned = TalentSystem.getPlayerTalents(playerId);
+            java.util.List<TalentSystem.Talent> available = TalentSystem.getAvailableTalents(playerId);
+
+            String[] options = new String[] {
+                "View Learned Talents (" + owned.size() + ")",
+                "Learn Available Talent (" + available.size() + ")",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 10, 31, 5, -1, options);
+            switch (option) {
+                case 0:
+                    showTalentOwnedPanel(playerId);
+                    break;
+                case 1:
+                    showTalentLearnPanel(playerId);
+                    break;
+                case 2:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showTalentOwnedPanel(int playerId) {
+        java.util.Set<Integer> owned = TalentSystem.getPlayerTalents(playerId);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        lines.add("Learned Talents:");
+        if (owned.isEmpty()) {
+            lines.add("None learned yet.");
+        }
+        else {
+            for (Integer id : owned) {
+                TalentSystem.Talent t = TalentSystem.talents.get(id);
+                if (t != null) {
+                    lines.add("- " + t.name);
+                }
+            }
+        }
+        showSimplePanel("TALENT TREE", lines);
+    }
+
+    private static void showTalentLearnPanel(int playerId) {
+        java.util.List<TalentSystem.Talent> available = TalentSystem.getAvailableTalents(playerId);
+        if (available.isEmpty()) {
+            showSimplePanel("TALENT TREE", java.util.List.of("No available talents to learn."));
+            return;
+        }
+        String[] options = new String[available.size() + 1];
+        for (int i = 0; i < available.size(); i++) {
+            options[i] = available.get(i).name;
+        }
+        options[available.size()] = "Back";
+        int selection = Dialog.showOptionsMenu(8, 8, 31, available.size() + 3, -1, options);
+        if (selection >= 0 && selection < available.size()) {
+            TalentSystem.Talent chosen = available.get(selection);
+            boolean learned = TalentSystem.learnTalent(playerId, chosen.id);
+            if (learned) {
+                applyTalentBonus(chosen.id);
+                showUiToast("Learned talent: " + chosen.name);
+            }
+            else {
+                showUiToast("Could not learn talent.");
+            }
+        }
+    }
+
+    private static void applyTalentBonus(int talentId) {
+        switch (talentId) {
+            case 0:
+                RpgSystems.getProfile().getBaseStats().add(dq1.core.rpg.RpgAttribute.MAX_HP, 10);
+                break;
+            case 1:
+                RpgSystems.getProfile().getBaseStats().add(dq1.core.rpg.RpgAttribute.MAX_MP, 6);
+                break;
+            case 2:
+                RpgSystems.getProfile().getBaseStats().add(dq1.core.rpg.RpgAttribute.CRIT_RATE, 2);
+                break;
+            case 3:
+                RpgSystems.getProfile().getBaseStats().add(dq1.core.rpg.RpgAttribute.SPELL_POWER, 4);
+                break;
+            case 4:
+                RpgSystems.getProfile().getBaseStats().add(dq1.core.rpg.RpgAttribute.VITALITY, 2);
+                break;
+            default:
+                break;
+        }
+        RpgSystems.getRuntime().exportToGlobals();
     }
 
     private static RpgActionResult equipFirstAvailableGear(RpgRuntimeService runtime) {
@@ -2306,3 +2618,8 @@ public class Game {
         Dialog.hideOptionsMenu(3, 4, 4, 31, 16, "");
     }
 }
+
+
+
+
+
