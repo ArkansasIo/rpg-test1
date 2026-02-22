@@ -81,4 +81,12 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <!--
+      Override javadoc generation to avoid noisy javadoc warnings produced by the
+      default build (many classes lack Javadoc comments). This target simply
+      skips the javadoc step; remove or edit this override to re-enable javadoc.
+    -->
+    <target name="-javadoc-build">
+        <echo message="Skipping javadoc generation (overridden in build.xml)"/>
+    </target>
 </project>

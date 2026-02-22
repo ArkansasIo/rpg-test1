@@ -5,6 +5,14 @@
 # Ignore compiled classes in build directories
 build/classes/
 
+# Distribution artifacts
+/dist/
+/dist/**
+*.jar
+
+# Generated map images (uncomment if you want to track map images)
+maps/
+
 # Common IDE/editor files
 *.iml
 /.idea/
