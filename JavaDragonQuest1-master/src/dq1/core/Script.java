@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  */
 public class Script {
 
-    private static final Map<String, Object> VARS = new HashMap();
+    private static final Map<String, Object> VARS = new HashMap<>();
     private static final Map<String, Command> GLOBAL_COMMANDS = new HashMap<>();
     
     static {
@@ -713,7 +713,7 @@ public class Script {
     
     // will register static class methods marked 
     // with @ScriptCommand as global commands
-    public static void registerClassStaticCommands(Class registerClass) {
+    public static void registerClassStaticCommands(Class<?> registerClass) {
         for(Method method : registerClass.getDeclaredMethods()) {
             boolean annotated = false;
             String commandName = null;
@@ -920,7 +920,18 @@ public class Script {
         try (FileInputStream fis = new FileInputStream(openFile);
              ObjectInputStream ois = new ObjectInputStream(fis);) {
             
-            globalVars = (Map) ois.readObject();
+            Object loaded = ois.readObject();
+            if (!(loaded instanceof Map<?, ?>)) {
+                return null;
+            }
+
+            Map<?, ?> rawMap = (Map<?, ?>) loaded;
+            globalVars = new HashMap<>();
+            for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                if (entry.getKey() instanceof String) {
+                    globalVars.put((String) entry.getKey(), entry.getValue());
+                }
+            }
         } catch (Exception ex) {
             return null;
         }

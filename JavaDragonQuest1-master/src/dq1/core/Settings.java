@@ -25,6 +25,28 @@ public class Settings {
     public static int KEY_DOWN = KeyEvent.VK_DOWN;
     public static int KEY_CONFIRM = KeyEvent.VK_X;
     public static int KEY_CANCEL = KeyEvent.VK_Z;
+
+    // WoW-style menu/system shortcuts
+    public static int KEY_WOW_INVENTORY = KeyEvent.VK_I;
+    public static int KEY_WOW_SPELLBOOK = KeyEvent.VK_K;
+    public static int KEY_WOW_CHARACTER = KeyEvent.VK_C;
+    public static int KEY_WOW_QUEST_LOG = KeyEvent.VK_J;
+    public static int KEY_WOW_WORLD_MAP = KeyEvent.VK_M;
+    public static int KEY_WOW_SETTINGS = KeyEvent.VK_O;
+    public static int KEY_WOW_PARTY = KeyEvent.VK_P;
+    public static int KEY_WOW_UI = KeyEvent.VK_U;
+
+    // WoW-style hotbar keys
+    public static int KEY_WOW_HOTBAR_1 = KeyEvent.VK_1;
+    public static int KEY_WOW_HOTBAR_2 = KeyEvent.VK_2;
+    public static int KEY_WOW_HOTBAR_3 = KeyEvent.VK_3;
+    public static int KEY_WOW_HOTBAR_4 = KeyEvent.VK_4;
+    public static int KEY_WOW_HOTBAR_5 = KeyEvent.VK_5;
+    public static int KEY_WOW_HOTBAR_6 = KeyEvent.VK_6;
+    public static int KEY_WOW_HOTBAR_7 = KeyEvent.VK_7;
+    public static int KEY_WOW_HOTBAR_8 = KeyEvent.VK_8;
+    public static int KEY_WOW_HOTBAR_9 = KeyEvent.VK_9;
+    public static int KEY_WOW_HOTBAR_10 = KeyEvent.VK_0;
     
     // --- resources ---
     
@@ -73,4 +95,6 @@ public class Settings {
     public static int keyDown = KEY_DOWN;
     public static int keyLeft = KEY_LEFT;
     public static int keyRight = KEY_RIGHT;
+    public static boolean MOUSE_ENABLED = true;
+    public static boolean SKIP_INTRO_STORY = false;
 }

@@ -1,0 +1,12 @@
+# continents_wow.inf
+# Format: id, name, description
+1, "Eastern Kingdoms", "A continent of diverse climates, home to humans, dwarves, and undead."
+2, "Kalimdor", "A wild continent, home to orcs, night elves, and tauren."
+3, "Outland", "A shattered world, former home of the orcs and draenei."
+4, "Northrend", "A frozen continent, domain of the Lich King."
+5, "Pandaria", "A mist-shrouded land of ancient secrets."
+6, "Draenor", "A savage world, alternate timeline of orcish home."
+7, "Broken Isles", "A group of islands at the heart of the Great Sea."
+8, "Zandalar", "Troll homeland, ancient and powerful."
+9, "Kul Tiras", "Naval power and human kingdom."
+10, "Shadowlands", "The realms of death beyond the mortal world."

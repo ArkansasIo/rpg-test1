@@ -1,0 +1,34 @@
+# subzones_wow.inf
+# Format: id, zone_id, name, description
+1, 1, "Northshire Valley", "The starting area for human characters."
+2, 1, "Goldshire", "A small town in Elwynn Forest."
+3, 2, "Razor Hill", "A Horde outpost in Durotar."
+4, 2, "Sen'jin Village", "A troll village in Durotar."
+5, 3, "Deathknell", "Forsaken starting area in Tirisfal Glades."
+6, 4, "Bloodhoof Village", "Tauren settlement in Mulgore."
+7, 5, "Coldridge Valley", "Dwarf and gnome starting area in Dun Morogh."
+8, 6, "Shadowglen", "Night elf starting area in Teldrassil."
+# Outland
+9, 16, "The Stair of Destiny", "Portal area in Hellfire Peninsula."
+10, 17, "Cenarion Refuge", "Druid outpost in Zangarmarsh."
+11, 18, "Halaa", "PvP town in Nagrand."
+# Northrend
+12, 19, "Valiance Keep", "Alliance base in Borean Tundra."
+13, 20, "Valgarde", "Alliance base in Howling Fjord."
+14, 21, "The Frozen Throne", "Lich King's seat in Icecrown."
+# Pandaria
+15, 22, "Dawn's Blossom", "Village in the Jade Forest."
+16, 23, "Shado-Pan Monastery", "Monastery in Kun-Lai Summit."
+# Draenor
+17, 24, "Frostwall", "Horde garrison in Frostfire Ridge."
+18, 25, "Shadowmoon Enclave", "Draenei settlement in Shadowmoon Valley."
+# Broken Isles
+19, 26, "Azurewing Repose", "Blue dragonflight area in Azsuna."
+20, 27, "Sanctum of Order", "Nightborne area in Suramar."
+# Zandalar
+21, 28, "Dazar'alor", "Troll capital in Zuldazar."
+# Kul Tiras
+22, 29, "Boralus", "Capital city of Kul Tiras."
+# Shadowlands
+23, 30, "Elysian Hold", "Kyrian stronghold in Bastion."
+24, 31, "Pridefall Hamlet", "Venthyr village in Revendreth."

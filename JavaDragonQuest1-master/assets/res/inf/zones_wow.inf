@@ -1,0 +1,41 @@
+# zones_wow.inf
+# Format: id, name, continent, biome, dungeon, difficulty, world_tier, enemy_scaling, loot_scaling, description
+1, "Elwynn Forest", "Eastern Kingdoms", "Forest", "None", 1, 1, 1.0, 1.0, "The lush starting zone for humans, home to Stormwind."
+2, "Durotar", "Kalimdor", "Desert", "None", 1, 1, 1.0, 1.0, "The arid homeland of the orcs, near Orgrimmar."
+3, "Tirisfal Glades", "Eastern Kingdoms", "Forest", "None", 1, 1, 1.0, 1.0, "Forsaken territory, dark and haunted."
+4, "Mulgore", "Kalimdor", "Plains", "None", 1, 1, 1.0, 1.0, "Rolling plains, home of the Tauren."
+5, "Dun Morogh", "Eastern Kingdoms", "Tundra", "None", 1, 1, 1.0, 1.0, "Snowy mountains, home to dwarves and gnomes."
+6, "Teldrassil", "Kalimdor", "Forest", "None", 1, 1, 1.0, 1.0, "The great tree, home to night elves."
+7, "The Barrens", "Kalimdor", "Savanna", "Wailing Caverns", 2, 1, 1.2, 1.0, "A vast, dry savanna, crossroads of the Horde."
+8, "Westfall", "Eastern Kingdoms", "Plains", "The Deadmines", 2, 1, 1.2, 1.0, "Farmland overrun by bandits, west of Elwynn."
+9, "Stranglethorn Vale", "Eastern Kingdoms", "Jungle", "Zul'Gurub", 3, 2, 1.5, 1.1, "A dangerous jungle full of trolls and beasts."
+10, "Darkshore", "Kalimdor", "Coast", "None", 2, 1, 1.2, 1.0, "Stormy northern coast of Kalimdor."
+11, "Stormwind City", "Eastern Kingdoms", "Urban", "None", 1, 1, 1.0, 1.0, "The human capital city."
+12, "Orgrimmar", "Kalimdor", "Urban", "None", 1, 1, 1.0, 1.0, "The orc capital city."
+13, "Ironforge", "Eastern Kingdoms", "Urban", "None", 1, 1, 1.0, 1.0, "The dwarven capital city."
+14, "Thunder Bluff", "Kalimdor", "Urban", "None", 1, 1, 1.0, 1.0, "The tauren capital city."
+15, "Darnassus", "Kalimdor", "Urban", "None", 1, 1, 1.0, 1.0, "The night elf capital city."
+# Outland
+16, "Hellfire Peninsula", "Outland", "Wasteland", "Hellfire Ramparts", 2, 2, 1.3, 1.1, "The shattered gateway to Outland."
+17, "Zangarmarsh", "Outland", "Swamp", "The Underbog", 2, 2, 1.3, 1.1, "A marshy region of Outland."
+18, "Nagrand", "Outland", "Plains", "None", 2, 2, 1.3, 1.1, "Rolling grasslands and floating islands."
+# Northrend
+19, "Borean Tundra", "Northrend", "Tundra", "None", 2, 2, 1.3, 1.1, "Frozen wastelands and steam pools."
+20, "Howling Fjord", "Northrend", "Fjord", "Utgarde Keep", 2, 2, 1.3, 1.1, "Cliffs and vrykul settlements."
+21, "Icecrown", "Northrend", "Glacier", "Icecrown Citadel", 3, 3, 1.5, 1.2, "The Lich King's domain."
+# Pandaria
+22, "The Jade Forest", "Pandaria", "Forest", "Temple of the Jade Serpent", 2, 2, 1.3, 1.1, "Lush forests and pandaren villages."
+23, "Kun-Lai Summit", "Pandaria", "Mountain", "Shado-Pan Monastery", 2, 2, 1.3, 1.1, "Snowy peaks and monasteries."
+# Draenor
+24, "Frostfire Ridge", "Draenor", "Tundra", "Bloodmaul Slag Mines", 2, 2, 1.3, 1.1, "Frozen home of the Frostwolf clan."
+25, "Shadowmoon Valley", "Draenor", "Shadow", "Shadowmoon Burial Grounds", 2, 2, 1.3, 1.1, "Dark forests and draenei temples."
+# Broken Isles
+26, "Azsuna", "Broken Isles", "Coast", "Eye of Azshara", 2, 2, 1.3, 1.1, "Ruins and naga."
+27, "Suramar", "Broken Isles", "Urban", "The Nighthold", 3, 3, 1.5, 1.2, "Ancient nightborne city."
+# Zandalar
+28, "Zuldazar", "Zandalar", "Jungle", "Atal'Dazar", 2, 2, 1.3, 1.1, "Troll capital and golden pyramid."
+# Kul Tiras
+29, "Tiragarde Sound", "Kul Tiras", "Coast", "Freehold", 2, 2, 1.3, 1.1, "Port city and rolling hills."
+# Shadowlands
+30, "Bastion", "Shadowlands", "Plains", "Spires of Ascension", 3, 3, 1.5, 1.2, "Realm of the Kyrian."
+31, "Revendreth", "Shadowlands", "Gothic", "Castle Nathria", 3, 3, 1.5, 1.2, "Realm of the Venthyr."

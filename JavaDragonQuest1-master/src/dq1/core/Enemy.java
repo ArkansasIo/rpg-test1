@@ -37,6 +37,10 @@ public class Enemy {
     
     public Enemy(String serializedData) {
         String[] args = serializedData.trim().split(",");
+        // Only parse if there are at least 12 arguments (id, name, str, agi, hp, pat, sr, dr, xp, gp, groupId, finalBoss)
+        if (args.length < 12 || serializedData.trim().startsWith("//") || serializedData.trim().startsWith("#") || serializedData.trim().startsWith(";")) {
+            throw new IllegalArgumentException("Invalid or comment enemy data: " + serializedData);
+        }
         try {
             id = Integer.parseInt(args[0].trim(), 16);
             name = args[1].trim();

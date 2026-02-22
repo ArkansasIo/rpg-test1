@@ -154,7 +154,7 @@ public class Credits {
         String[] lines = msg.split("\n");
         int lineNumber = 0;
         for (String line : lines) {
-            font.drawText(g, line, 3, lineNumber);
+            BitmapFont.drawText(g, line, 3, lineNumber);
             lineNumber++;
         }
         ImageIO.write(result, "png", new File("d:/dq1_credits.png"));

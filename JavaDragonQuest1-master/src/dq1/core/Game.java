@@ -1,17 +1,27 @@
 package dq1.core;
 
 import static dq1.core.Game.State.*;
+import dq1.core.rpg.BuffDebuffManager;
+import dq1.core.rpg.InventorySystem;
+import dq1.core.rpg.PlayerRpgProfile;
+import dq1.core.rpg.RpgSystems;
 import dq1.core.Script.ScriptCommand;
 import static dq1.core.Settings.*;
 import dq1.core.TileMap.Area;
+import mmorpg.ui.WowUiFrame;
+import mmorpg.world.WoWTileMapSystem;
 import java.awt.Graphics2D;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 
 /**
  * Game class.
@@ -19,10 +29,18 @@ import java.util.logging.Logger;
  * @author Leonardo Ono (ono.leo80@gmail.com)
  */
 public class Game {
+        public static void main(String[] args) {
+            try {
+                start();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
     
     public static enum State { OL_PRESENTS, TITLE, MAP, CHANGE_MAP }
     
-    private static final Properties TEXTS;
+    private static Properties TEXTS;
     
     private static boolean running;
     private static TileMap currentMap;
@@ -40,9 +58,7 @@ public class Game {
     private static boolean newClearLocalVars;
     private static Animation titleShineAnimation;
     
-    static {
-        TEXTS = Resource.getTexts(RES_TEXTS_INF);
-    }
+    // Removed static block for TEXTS initialization
 
     public static Properties getTexts() {
         return TEXTS;
@@ -64,7 +80,36 @@ public class Game {
         return currentMap;
     }
 
+    private static boolean isSkipRequested() {
+        return Input.isKeyJustPressed(KEY_CONFIRM)
+                || Input.isKeyJustPressed(KEY_CANCEL);
+    }
+
+    private static boolean waitSkippable(int millis) {
+        long endTime = System.currentTimeMillis() + millis;
+        while (System.currentTimeMillis() < endTime) {
+            if (isSkipRequested()) {
+                return true;
+            }
+            View.refresh();
+            sleep(1000 / 60);
+        }
+        return false;
+    }
+
     public static void start() throws Exception {
+                // Initialize game window and canvas
+                javax.swing.JFrame frame = new javax.swing.JFrame("Dragon Quest 1");
+                frame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
+                frame.setResizable(false);
+                frame.add(View.getCanvas());
+                frame.pack();
+                frame.setSize(Settings.VIEWPORT_WIDTH, Settings.VIEWPORT_HEIGHT);
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+                // Wait for canvas and graphics to initialize
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+            TEXTS = Resource.getTexts(RES_TEXTS_INF);
         Resource.loadMusics(RES_MUSICS_INF);
         Resource.loadEnemies(RES_ENEMIES_INF);
         Resource.loadItems(RES_ITEMS_INF);
@@ -74,11 +119,13 @@ public class Game {
         Audio.start();
         Player.start();
         Inventory.start();
-        
+        Quest.initializeWoWStoryIfNeeded();
+        RpgSystems.bootstrap();
+
         //testStartSpecificMap();
         //testStartLoadingSavedGame();
         //testChangePlayerStatus();
-        
+
         Script.registerClassStaticCommands(Audio.class);
         Script.registerClassStaticCommands(Game.class);
         Script.registerClassStaticCommands(View.class);
@@ -87,15 +134,16 @@ public class Game {
         Script.registerClassStaticCommands(Inventory.class);
         Script.registerClassStaticCommands(Shop.class);
         Script.registerClassStaticCommands(Battle.class);
-        
+
         titleShineAnimation = new Animation(
-                Resource.getImage("title_shine"), 12, 1, 500);
-        
+            Resource.getImage("title_shine"), 12, 1, 500);
+
         titleShineAnimation.createAnimation("shine"
-                , new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-                             11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-                             11, 11, 11, 11, 11, 11, 11, 11, 11, 11 });
-        
+            , new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+                     11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
+                     11, 11, 11, 11, 11, 11, 11, 11, 11, 11 });
+
+        View.start(); // Initialize graphics context before starting game logic
         running = true;
         new Thread(new LogicThread()).start();
     }
@@ -157,37 +205,61 @@ public class Game {
     }
     
     private static void updateOLPresents() throws Exception {
+        if (Settings.SKIP_INTRO_STORY) {
+            state = TITLE;
+            return;
+        }
         OLPresents.reset();
         Graphics2D g = View.getOffscreenGraphics2D(1);
         OLPresents.update();
         OLPresents.draw(g);
         View.refresh();
-        sleep(3000);
+        if (waitSkippable(3000)) {
+            state = TITLE;
+            return;
+        }
         startTime = System.currentTimeMillis();
         while (OLPresents.update()) {
+            if (isSkipRequested()) {
+                state = TITLE;
+                return;
+            }
             OLPresents.draw(g);
             View.refresh();
             sync30fps();
         }
         String presents = getText("@@presents");
         for (int i = 0; i < presents.length(); i++) {
+            if (isSkipRequested()) {
+                state = TITLE;
+                return;
+            }
             Dialog.print(1, 12 + i, 19, presents.charAt(i));
             sleep(100);
         }
-        sleep(3000);
+        if (waitSkippable(3000)) {
+            state = TITLE;
+            return;
+        }
         View.fadeOut();
         state = TITLE;
     }
     
     private static void updateTitle() throws Exception {
         View.showImage(1, "title", 0, 0);
-        sleep(2000);
+        if (!Settings.SKIP_INTRO_STORY) {
+            waitSkippable(2000);
+        }
         long introMusicStartTime = System.currentTimeMillis();
         Audio.playMusic("intro");
         View.fadeIn();
         Graphics2D g = View.getOffscreenGraphics2D(1);
         startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - introMusicStartTime < 10500) {
+        while (!Settings.SKIP_INTRO_STORY
+                && System.currentTimeMillis() - introMusicStartTime < 10500) {
+            if (isSkipRequested()) {
+                break;
+            }
             titleShineAnimation.update();
             View.showImage(1, "title", 0, 0);
             titleShineAnimation.draw(g, 179, 60);
@@ -218,12 +290,15 @@ public class Game {
                 "Load Game 4",
                 "Load Game 5",
                 "Settings",
-                "Quests"
+                "Quests",
+                "Quick Start (Skip Story)",
+                "View WoW Map",
+                "View WoW Map (Graphical)"
             };
             int option = -1;
             while (option == -1) {
                 option = Dialog.showOptionsMenu(
-                    10, 19, 18, 8, -1, options
+                    10, 19, 18, 9, -1, options
                 );
             }
             switch (option) {
@@ -266,6 +341,19 @@ public class Game {
                     break;
                 case 8: // Quests
                     showQuestMenu();
+                    break;
+                case 9: // Quick Start
+                    Settings.SKIP_INTRO_STORY = true;
+                    Player.setName("HERO");
+                    Audio.playSound(Audio.SOUND_MENU_CONFIRMED);
+                    teleport("tantegel_castle", 65, 16, "up", 1, "tantegel", 0, 1, 1, 1);
+                    exit = true;
+                    break;
+                case 10: // View WoW Map
+                    showWoWMapDialog();
+                    break;
+                case 11: // View WoW Map (Graphical)
+                    showWoWMapGraphical();
                     break;
             }
         }
@@ -586,11 +674,10 @@ public class Game {
         newClearLocalVars = true;
         state = CHANGE_MAP;
     }
-    
+
     private static void showSavedFiles() {
         Dialog.drawBoxBorder(3, 9, 3, 28, 18);
         Dialog.fillBox(3, ' ', 10, 4, 27, 17);
-        //Dialog.printText(3, 11, 3, "SAVE GAME");
         for (int i = 0; i < 3; i++) {
             String mapName = "---------";
             String playerName = "----";
@@ -601,46 +688,45 @@ public class Game {
             if (fileGlobalVars != null) {
                 mapName = Util.formatLeft(
                     fileGlobalVars.get("$$current_map_name").toString(), 12);
-                
+
                 playerName = Util.formatLeft(
                         fileGlobalVars.get("$$player_name").toString(), 4);
-                
+
                 playerLV = Util.formatLeft(
                         fileGlobalVars.get("##player_lv").toString(), 2);
-                
+
                 playerG = Util.formatRight(
                         fileGlobalVars.get("##player_g").toString(), 5);
-                
+
                 playerAccumulatedTimeMs = Util.convertMsToHHMMSS(
                     (Long) fileGlobalVars.get("##player_accumulated_time_ms"));
             }
             Dialog.printText(
                     3, 11, 4 + i * 5, "File " + (i + 1) + " - " + playerName);
-            
+
             Dialog.printText(3, 11, 5 + i * 5, "Loc.:" + mapName);
             Dialog.printText(
                     3, 11, 6 + i * 5, "Time:" + playerAccumulatedTimeMs);
-            
+
             Dialog.printText(
                     3, 11, 7 + i * 5, "  LV:" + playerLV + "   G:" + playerG);
-            
+
             if (i < 2) {
                 Dialog.printText(3, 9, 8 + i * 5
                         , "\u000c\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\u000e");
             }
         }
     }
-    
+
     private static void hideSavedFiles() {
         Dialog.fillBox(3, -1, 9, 3, 28, 18);
         View.refresh();
     }
-    
-    // return -1 = canceled;
+
+    // return -1 = canceled
     private static int selectGameFile(int defaultSelectedItem) {
         showSavedFiles();
         int selectedItem = defaultSelectedItem;
-        // for appropriate cursor start blink time
         long blinkTime = System.nanoTime();
         boolean exit = false;
         while (!exit) {
@@ -648,20 +734,19 @@ public class Game {
                 Dialog.print(3, 10, 4 + r * 5, ' ');
             }
 
-            // blink cursor
-            if ((int) ((System.nanoTime() - blinkTime) 
+            if ((int) ((System.nanoTime() - blinkTime)
                                         * 0.0000000035) % 2 == 0) {
 
                 Dialog.print(3, 10, 4 + selectedItem * 5, 2);
             }
 
-            if (Input.isKeyJustPressed(KEY_UP) 
+            if (Input.isKeyJustPressed(KEY_UP)
                                             && selectedItem > 0) {
 
                 selectedItem--;
                 blinkTime = System.nanoTime();
             }
-            else if (Input.isKeyJustPressed(KEY_DOWN) 
+            else if (Input.isKeyJustPressed(KEY_DOWN)
                                 && selectedItem < 3 - 1) {
 
                 selectedItem++;
@@ -677,7 +762,7 @@ public class Game {
             }
             View.refresh();
             Game.sleep(1000 / 60);
-        }        
+        }
         return selectedItem;
     }
     
@@ -1118,33 +1203,108 @@ public class Game {
     }
 
     private static void showSettingsMenu() {
-        String[] settingsOptions = new String[] {
-            "Screen Resolution",
-            "Fullscreen Toggle",
-            "Remap Controls",
-            "Back"
-        };
         boolean exit = false;
         while (!exit) {
-            int option = Dialog.showOptionsMenu(10, 10, 20, 6, -1, settingsOptions);
+            String[] settingsOptions = new String[] {
+                "Audio / Speed",
+                "Display",
+                "Keyboard Keybinds",
+                "Mouse Controls",
+                "UI / Story",
+                "Reset Default Keybinds",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 8, 24, 9, -1, settingsOptions);
             switch (option) {
-                case 0: // Screen Resolution
+                case 0:
+                    showOptionsMenu();
+                    break;
+                case 1:
                     changeScreenResolution();
                     break;
-                case 1: // Fullscreen Toggle
-                    Settings.fullscreen = !Settings.fullscreen;
-                    Dialog.printText(3, 10, 16, "Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"));
-                    Game.sleep(1000);
-                    Dialog.hideOptionsMenu(3, 10, 16, 20, 2, "Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"));
-                    break;
-                case 2: // Remap Controls
+                case 2:
                     remapControlsMenu();
                     break;
-                case 3: // Back
+                case 3:
+                    showMouseControlsMenu();
+                    break;
+                case 4:
+                    showUiStoryMenu();
+                    break;
+                case 5:
+                    resetDefaultKeybinds();
+                    break;
+                case 6:
+                case -1:
                     exit = true;
                     break;
             }
         }
+    }
+
+    private static void showMouseControlsMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Mouse Input: " + (Settings.MOUSE_ENABLED ? "ON" : "OFF"),
+                "Left Click -> Confirm",
+                "Right Click -> Cancel",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 10, 28, 6, -1, options);
+            switch (option) {
+                case 0:
+                    Settings.MOUSE_ENABLED = !Settings.MOUSE_ENABLED;
+                    showUiToast("Mouse Input: " + (Settings.MOUSE_ENABLED ? "ON" : "OFF"));
+                    break;
+                case 1:
+                    showUiToast("Left click is confirm.");
+                    break;
+                case 2:
+                    showUiToast("Right click is cancel.");
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showUiStoryMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Auto Skip Story: " + (Settings.SKIP_INTRO_STORY ? "ON" : "OFF"),
+                "Show Controls Help",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 10, 24, 5, -1, options);
+            switch (option) {
+                case 0:
+                    Settings.SKIP_INTRO_STORY = !Settings.SKIP_INTRO_STORY;
+                    showUiToast("Auto Skip Story: " + (Settings.SKIP_INTRO_STORY ? "ON" : "OFF"));
+                    break;
+                case 1:
+                    showUiHelpMenu();
+                    break;
+                case 2:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void resetDefaultKeybinds() {
+        Settings.KEY_CONFIRM = KeyEvent.VK_X;
+        Settings.KEY_CANCEL = KeyEvent.VK_Z;
+        Settings.KEY_UP = KeyEvent.VK_UP;
+        Settings.KEY_DOWN = KeyEvent.VK_DOWN;
+        Settings.KEY_LEFT = KeyEvent.VK_LEFT;
+        Settings.KEY_RIGHT = KeyEvent.VK_RIGHT;
+        syncLegacyKeybindFields();
+        showUiToast("Keybinds reset to default.");
     }
 
     private static void changeScreenResolution() {
@@ -1153,124 +1313,406 @@ public class Game {
             "800x600",
             "1024x768",
             "1280x960",
+            "Toggle Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"),
             "Back"
         };
         boolean exit = false;
         while (!exit) {
-            int option = Dialog.showOptionsMenu(12, 12, 18, 6, -1, resolutions);
+            int option = Dialog.showOptionsMenu(10, 10, 30, 8, -1, resolutions);
             switch (option) {
                 case 0:
                     Settings.screenWidth = 640;
                     Settings.screenHeight = 480;
+                    showUiToast("Resolution set to 640x480");
                     break;
                 case 1:
                     Settings.screenWidth = 800;
                     Settings.screenHeight = 600;
+                    showUiToast("Resolution set to 800x600");
                     break;
                 case 2:
                     Settings.screenWidth = 1024;
                     Settings.screenHeight = 768;
+                    showUiToast("Resolution set to 1024x768");
                     break;
                 case 3:
                     Settings.screenWidth = 1280;
                     Settings.screenHeight = 960;
+                    showUiToast("Resolution set to 1280x960");
                     break;
                 case 4:
+                    Settings.fullscreen = !Settings.fullscreen;
+                    showUiToast("Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"));
+                    break;
+                case 5:
+                case -1:
                     exit = true;
                     break;
-            }
-            if (option != 4) {
-                Dialog.printText(3, 12, 18, "Resolution set to " + Settings.screenWidth + "x" + Settings.screenHeight);
-                Game.sleep(1000);
-                Dialog.hideOptionsMenu(3, 12, 18, 18, 2, "Resolution set to " + Settings.screenWidth + "x" + Settings.screenHeight);
             }
         }
     }
 
     private static void remapControlsMenu() {
-        String[] controls = new String[] {
-            "Confirm",
-            "Cancel",
-            "Up",
-            "Down",
-            "Left",
-            "Right",
-            "Back"
-        };
         boolean exit = false;
         while (!exit) {
-            int option = Dialog.showOptionsMenu(14, 14, 16, 8, -1, controls);
+            String[] controls = new String[] {
+                "Confirm: " + keyName(Settings.KEY_CONFIRM),
+                "Cancel : " + keyName(Settings.KEY_CANCEL),
+                "Up     : " + keyName(Settings.KEY_UP),
+                "Down   : " + keyName(Settings.KEY_DOWN),
+                "Left   : " + keyName(Settings.KEY_LEFT),
+                "Right  : " + keyName(Settings.KEY_RIGHT),
+                "Back"
+            };
+
+            int option = Dialog.showOptionsMenu(8, 8, 28, 9, -1, controls);
             switch (option) {
                 case 0:
-                    Settings.keyConfirm = promptKeyRemap("Confirm");
+                    remapBinding("Confirm", 0);
                     break;
                 case 1:
-                    Settings.keyCancel = promptKeyRemap("Cancel");
+                    remapBinding("Cancel", 1);
                     break;
                 case 2:
-                    Settings.keyUp = promptKeyRemap("Up");
+                    remapBinding("Up", 2);
                     break;
                 case 3:
-                    Settings.keyDown = promptKeyRemap("Down");
+                    remapBinding("Down", 3);
                     break;
                 case 4:
-                    Settings.keyLeft = promptKeyRemap("Left");
+                    remapBinding("Left", 4);
                     break;
                 case 5:
-                    Settings.keyRight = promptKeyRemap("Right");
+                    remapBinding("Right", 5);
                     break;
                 case 6:
+                case -1:
                     exit = true;
                     break;
-            }
-            if (option != 6) {
-                Dialog.printText(3, 14, 22, "Control updated.");
-                Game.sleep(1000);
-                Dialog.hideOptionsMenu(3, 14, 22, 16, 2, "Control updated.");
             }
         }
     }
 
-    private static int promptKeyRemap(String controlName) {
-        Dialog.printText(3, 14, 20, "Press new key for " + controlName);
+    private static void remapBinding(String controlName, int bindingIndex) {
+        Dialog.printText(3, 8, 21, "Press key for " + controlName + " (ESC = cancel)");
         int newKey = waitForKeyPress();
-        Dialog.hideOptionsMenu(3, 14, 20, 24, 2, "Press new key for " + controlName);
-        return newKey;
+        Dialog.hideOptionsMenu(3, 8, 21, 40, 2, "");
+        if (newKey == -1) {
+            return;
+        }
+        switch (bindingIndex) {
+            case 0: Settings.KEY_CONFIRM = newKey; break;
+            case 1: Settings.KEY_CANCEL = newKey; break;
+            case 2: Settings.KEY_UP = newKey; break;
+            case 3: Settings.KEY_DOWN = newKey; break;
+            case 4: Settings.KEY_LEFT = newKey; break;
+            case 5: Settings.KEY_RIGHT = newKey; break;
+        }
+        syncLegacyKeybindFields();
+        showUiToast(controlName + " = " + keyName(newKey));
     }
 
     private static int waitForKeyPress() {
-        // Wait for any key press and return its key code
-        // This is a stub; actual implementation may require a custom KeyListener
-        // For now, return KeyEvent.VK_ENTER as placeholder
-        return java.awt.event.KeyEvent.VK_ENTER;
+        Input.clearState();
+        while (true) {
+            int keyCode = Input.consumeLastKeyPressed();
+            if (keyCode == KeyEvent.VK_ESCAPE) {
+                return -1;
+            }
+            if (keyCode >= 0) {
+                return keyCode;
+            }
+            View.refresh();
+            Game.sleep(1000 / 60);
+        }
     }
 
-    private static void showQuestMenu() {
-        String[] questOptions = new String[] { "View Quests", "Back" };
+    private static void syncLegacyKeybindFields() {
+        Settings.keyConfirm = Settings.KEY_CONFIRM;
+        Settings.keyCancel = Settings.KEY_CANCEL;
+        Settings.keyUp = Settings.KEY_UP;
+        Settings.keyDown = Settings.KEY_DOWN;
+        Settings.keyLeft = Settings.KEY_LEFT;
+        Settings.keyRight = Settings.KEY_RIGHT;
+    }
+
+    private static String keyName(int keyCode) {
+        return KeyEvent.getKeyText(keyCode).toUpperCase();
+    }
+
+    private static void showUiToast(String text) {
+        Dialog.printText(3, 8, 22, text);
+        Game.sleep(900);
+        Dialog.hideOptionsMenu(3, 8, 22, Math.max(24, text.length() + 2), 2, "");
+    }
+
+    public static void showQuickToast(String text) {
+        showUiToast(text);
+    }
+
+    public static void showUiHelpMenu() {
+        Dialog.drawBoxBorder(3, 4, 4, 31, 17);
+        Dialog.fillBox(3, ' ', 5, 5, 30, 16);
+        Dialog.printText(3, 6, 6, "RPG UI HELP");
+        Dialog.printText(3, 6, 8, "Move: " + keyName(Settings.KEY_UP) + "/" + keyName(Settings.KEY_DOWN)
+                + "/" + keyName(Settings.KEY_LEFT) + "/" + keyName(Settings.KEY_RIGHT));
+        Dialog.printText(3, 6, 10, "Confirm: " + keyName(Settings.KEY_CONFIRM));
+        Dialog.printText(3, 6, 11, "Cancel : " + keyName(Settings.KEY_CANCEL));
+        Dialog.printText(3, 6, 13, "Mouse L: Confirm");
+        Dialog.printText(3, 6, 14, "Mouse R: Cancel");
+        Dialog.printText(3, 6, 16, "Press confirm/cancel to close");
+        waitForFireOrEscKey();
+        Dialog.hideOptionsMenu(3, 4, 4, 28, 14, "");
+    }
+
+    public static void showQuestMenu() {
+        String[] questOptions = new String[] {
+            "Quest Log",
+            "Story Chapters",
+            "Accept Available",
+            "Progress Objective",
+            "Turn In Completed",
+            "Create Demo Quest",
+            "Back"
+        };
         boolean exit = false;
         while (!exit) {
-            int option = Dialog.showOptionsMenu(10, 20, 18, 4, -1, questOptions);
+            int option = Dialog.showOptionsMenu(10, 18, 24, 8, -1, questOptions);
             switch (option) {
                 case 0:
                     showQuestList();
                     break;
                 case 1:
+                    showStoryChapters();
+                    break;
+                case 2:
+                    if (Quest.acceptFirstAvailableQuest()) {
+                        showUiToast("Accepted a quest.");
+                    } else {
+                        showUiToast("No available quests.");
+                    }
+                    break;
+                case 3:
+                    if (Quest.progressFirstActiveQuest()) {
+                        showUiToast("Objective progressed.");
+                    } else {
+                        showUiToast("No active objective.");
+                    }
+                    break;
+                case 4:
+                    if (Quest.turnInFirstCompletedQuest()) {
+                        showUiToast("Quest turned in.");
+                    } else {
+                        showUiToast("No completed quest to turn in.");
+                    }
+                    break;
+                case 5:
+                    addDemoQuestIfNeeded();
+                    break;
+                case 6:
+                case -1:
                     exit = true;
                     break;
             }
         }
     }
 
+    private static void addDemoQuestIfNeeded() {
+        if (Quest.getQuest("demo_quest") == null) {
+            Quest.seedDemoSideQuestIfNeeded();
+            showUiToast("Demo quest added.");
+        }
+        else {
+            showUiToast("Demo quest already exists.");
+        }
+    }
+
     private static void showQuestList() {
+        Quest.initializeWoWStoryIfNeeded();
         java.util.List<Quest.QuestData> quests = Quest.getAllQuests();
-        Dialog.drawBoxBorder(3, 10, 10, 30, 20);
-        int row = 11;
+        Dialog.drawBoxBorder(3, 6, 6, 31, 20);
+        Dialog.fillBox(3, ' ', 7, 7, 30, 19);
+        if (quests.isEmpty()) {
+            Dialog.printText(3, 8, 9, "No quests found.");
+            Dialog.printText(3, 8, 11, "Use 'Create Demo Quest' first.");
+            waitForFireOrEscKey();
+            Dialog.hideOptionsMenu(3, 6, 6, 26, 14, "");
+            return;
+        }
+        int row = 8;
         for (Quest.QuestData q : quests) {
-            Dialog.printText(3, 11, row, q.name + (q.completed ? " (Done)" : ""));
-            Dialog.printText(3, 11, row + 1, q.description);
+            if (row > 18) {
+                break;
+            }
+            String status = q.status.name().replace('_', ' ');
+            Dialog.printText(3, 8, row, q.name + " [" + status + "]");
+            if (row + 1 <= 18) {
+                if (!q.objectiveData.isEmpty()) {
+                    Dialog.printText(3, 8, row + 1, q.objectiveData.get(0).getProgressText());
+                } else {
+                    Dialog.printText(3, 8, row + 1, q.description);
+                }
+            }
             row += 3;
         }
-        Game.sleep(2000);
-        Dialog.hideOptionsMenu(3, 10, 10, 20, 10, "Quest List");
+        Dialog.printText(3, 8, 19, "Press confirm/cancel");
+        waitForFireOrEscKey();
+        Dialog.hideOptionsMenu(3, 6, 6, 26, 14, "");
+    }
+
+    private static void showStoryChapters() {
+        Quest.initializeWoWStoryIfNeeded();
+        java.util.List<Quest.StoryChapter> chapters = Quest.getStoryChapters();
+        Dialog.drawBoxBorder(3, 5, 5, 31, 20);
+        Dialog.fillBox(3, ' ', 6, 6, 30, 19);
+        int row = 7;
+        for (Quest.StoryChapter chapter : chapters) {
+            if (row > 18) {
+                break;
+            }
+            Dialog.printText(3, 7, row, chapter.title);
+            if (row + 1 <= 18) {
+                Dialog.printText(3, 7, row + 1, Quest.getChapterProgressText(chapter.id));
+            }
+            row += 3;
+        }
+        Dialog.printText(3, 7, 19, "Press confirm/cancel");
+        waitForFireOrEscKey();
+        Dialog.hideOptionsMenu(3, 5, 5, 27, 15, "");
+    }
+
+    private static void showWoWMapDialog() throws Exception {
+        try {
+            WoWTileMapSystem mapSystem
+                    = WoWTileMapSystem.loadFromGameAssets(Path.of("assets", "res", "map"));
+            Dialog.clear();
+            Dialog.print(0, 0, "WoW Tile Map System");
+            Dialog.print(0, 1, "Total Maps: " + mapSystem.getMaps().size());
+            int max = Math.min(3, mapSystem.getMaps().size());
+            for (int i = 0; i < max; i++) {
+                WoWTileMapSystem.MapRecord map = mapSystem.getMaps().get(i);
+                Dialog.print(0, 1, "#" + map.getMapId()
+                        + " " + map.getMapTitle()
+                        + " [" + map.getBiome() + "] "
+                        + map.getRows() + "x" + map.getCols()
+                        + " tiles=" + map.getTileCount());
+            }
+            Dialog.print(0, 1, "Use --wow-maps for full list.");
+        } catch (Exception ex) {
+            Dialog.clear();
+            Dialog.print(0, 0, "WoW Map catalog error.");
+            Dialog.print(0, 1, ex.getMessage() == null ? "Unknown error." : ex.getMessage());
+        }
+    }
+
+    private static void showWoWMapGraphical() {
+        SwingUtilities.invokeLater(() -> new WowUiFrame().setVisible(true));
+    }
+
+    public static void showWoWMapCatalog() throws Exception {
+        showWoWMapDialog();
+    }
+
+    public static void showWoWUi() {
+        showWoWMapGraphical();
+    }
+
+    public static void showSettingsMenuFromGame() {
+        showSettingsMenu();
+    }
+
+    public static void showPartyMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "RPG Character Summary",
+                "RPG Inventory Overview",
+                "RPG Buffs / Debuffs",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(9, 10, 30, 6, -1, options);
+            switch (option) {
+                case 0:
+                    showRpgCharacterSummary();
+                    break;
+                case 1:
+                    showRpgInventoryOverview();
+                    break;
+                case 2:
+                    showRpgBuffDebuffOverview();
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    public static void onWoWHotbarPressed(int slot) {
+        showUiToast("Hotbar slot " + slot + " activated.");
+    }
+
+    private static void showRpgCharacterSummary() {
+        List<String> lines = RpgSystems.buildSummaryLines();
+        showSimplePanel("RPG SUMMARY", lines);
+    }
+
+    private static void showRpgInventoryOverview() {
+        PlayerRpgProfile profile = RpgSystems.getProfile();
+        InventorySystem inventory = profile.getInventory();
+        List<String> lines = new ArrayList<>();
+        lines.add("Inventory slots: " + inventory.getUsedSlots()
+                + "/" + inventory.getMaxSlots());
+        lines.add("Item type catalog: 90");
+        int shown = 0;
+        for (InventorySystem.InventoryEntry entry : inventory.getEntries()) {
+            if (shown >= 6) {
+                break;
+            }
+            lines.add("- " + entry.getDefinition().getName()
+                    + " x" + entry.getQuantity());
+            shown++;
+        }
+        if (shown == 0) {
+            lines.add("Inventory is empty.");
+        }
+        showSimplePanel("RPG INVENTORY", lines);
+    }
+
+    private static void showRpgBuffDebuffOverview() {
+        PlayerRpgProfile profile = RpgSystems.getProfile();
+        List<BuffDebuffManager.ActiveEffect> effects
+                = profile.getBuffDebuffManager().getActiveEffects();
+        List<String> lines = new ArrayList<>();
+        lines.add("Active effects: " + effects.size());
+        if (effects.isEmpty()) {
+            lines.add("No buffs or debuffs.");
+        }
+        else {
+            for (BuffDebuffManager.ActiveEffect effect : effects) {
+                lines.add("- " + effect.getEffect().getName()
+                        + " (" + (effect.getEffect().isBuff() ? "Buff" : "Debuff")
+                        + ") turns=" + effect.getTurnsRemaining()
+                        + " stacks=" + effect.getStacks());
+            }
+        }
+        showSimplePanel("BUFFS / DEBUFFS", lines);
+    }
+
+    private static void showSimplePanel(String title, List<String> lines) {
+        Dialog.drawBoxBorder(3, 4, 4, 34, 20);
+        Dialog.fillBox(3, ' ', 5, 5, 33, 19);
+        Dialog.printText(3, 6, 6, title);
+        int row = 8;
+        for (String line : lines) {
+            if (row > 18) {
+                break;
+            }
+            Dialog.printText(3, 6, row++, line);
+        }
+        Dialog.printText(3, 6, 19, "Press confirm/cancel");
+        waitForFireOrEscKey();
+        Dialog.hideOptionsMenu(3, 4, 4, 31, 16, "");
     }
 }

@@ -1,0 +1,67 @@
+@startuml
+title Java Dragon Quest 1 - Core Class Diagram
+
+package "main" {
+  class Main
+}
+
+package "dq1.core" {
+  class Game
+  class View
+  class Resource
+  class Script
+  class Input
+  class Player
+  class TileMap
+  class Event
+  class Battle
+  class Dialog
+  class Inventory
+  class Audio
+  class Settings
+  class Quest
+}
+
+Main --> Game : starts
+Main --> View : initializes canvas/window
+Main --> Resource : sets icon image
+
+Game --> View : render/refresh/fx
+Game --> Resource : load data/assets
+Game --> Script : command registration + vars
+Game --> Player : movement/state
+Game --> TileMap : active map
+Game --> Dialog : menus/text
+Game --> Battle : encounters
+Game --> Inventory : item flow
+Game --> Audio : music/sfx
+Game --> Input : key checks
+Game --> Quest : menu access
+
+View --> Input : key listener
+View --> Resource : draw images
+
+Resource --> TileMap : parse maps
+Resource --> Event : parse map events
+
+Script --> Game : invokes @ScriptCommand
+Script --> Dialog : menu/text commands
+Script --> Battle : combat commands
+Script --> Player : state commands
+Script --> Inventory : inventory commands
+Script --> Audio : audio commands
+Script --> View : visual commands
+
+Player --> Inventory : equips/items
+TileMap --> Event : contains
+Battle --> Player : combatant stats
+Battle --> Enemy : uses data
+
+class Enemy
+Resource --> Enemy : load enemy table
+
+Settings --> Game : key/display configuration
+Settings --> View : viewport settings
+Settings --> Input : key mapping values
+
+@enduml

@@ -332,7 +332,7 @@ public class TileMap {
         }        
     }
 
-    private static final String[] MAIN_MENU_OPTIONS = new String[6];
+    private static final String[] MAIN_MENU_OPTIONS = new String[10];
     private static final String[] MAIN_MENU_EXIT_OPTIONS = new String[2];
     
     public static void showMainMenu() throws Exception {
@@ -343,7 +343,11 @@ public class TileMap {
         MAIN_MENU_OPTIONS[2] = Game.getText("@@map_menu_status");
         MAIN_MENU_OPTIONS[3] = Game.getText("@@map_menu_config");
         MAIN_MENU_OPTIONS[4] = Game.getText("@@map_menu_load_game");
-        MAIN_MENU_OPTIONS[5] = Game.getText("@@map_menu_quit");
+        MAIN_MENU_OPTIONS[5] = "Save Game";
+        MAIN_MENU_OPTIONS[6] = "Quests";
+        MAIN_MENU_OPTIONS[7] = "UI Help";
+        MAIN_MENU_OPTIONS[8] = "WoW Menus";
+        MAIN_MENU_OPTIONS[9] = Game.getText("@@map_menu_quit");
         boolean exit = false;
         int option = 0;
         while (!exit) {
@@ -357,7 +361,11 @@ public class TileMap {
                     case 2: Player.showCompleteStatus(); break;
                     case 3: Game.showOptionsMenu(); break;
                     case 4: exit = Game.loadGame(); break;
-                    case 5: handleMenuQuitOption(); break;
+                    case 5: Game.saveGame(); break;
+                    case 6: Game.showQuestMenu(); break;
+                    case 7: Game.showUiHelpMenu(); break;
+                    case 8: showWoWMenuSystem(); break;
+                    case 9: handleMenuQuitOption(); break;
                 }
                 // if you still don't have any items, a message will be shown
                 // if you still don't have any spells, a message will be shown
@@ -431,6 +439,61 @@ public class TileMap {
         }
         Dialog.close();
         return false;
+    }
+
+    private static void showWoWMenuSystem() throws Exception {
+        String[] wowOptions = new String[] {
+            "Inventory (I)",
+            "Spellbook (K)",
+            "Character (C)",
+            "Quest Log (J)",
+            "World Map (M)",
+            "WoW UI (U)",
+            "Settings (O)",
+            "Party (P)",
+            "Back"
+        };
+        boolean exit = false;
+        while (!exit) {
+            int option = Dialog.showOptionsMenu(3, true, 10, 6, 0, 0, -1, 0, wowOptions);
+            switch (option) {
+                case 0:
+                    Inventory.showSelectItemDialog();
+                    Dialog.close();
+                    break;
+                case 1:
+                    Magic.showSelectSpellDialog();
+                    Dialog.close();
+                    break;
+                case 2:
+                    Player.showCompleteStatus();
+                    Dialog.close();
+                    break;
+                case 3:
+                    Game.showQuestMenu();
+                    Dialog.close();
+                    break;
+                case 4:
+                    Game.showWoWMapCatalog();
+                    Dialog.close();
+                    break;
+                case 5:
+                    Game.showWoWUi();
+                    break;
+                case 6:
+                    Game.showSettingsMenuFromGame();
+                    Dialog.close();
+                    break;
+                case 7:
+                    Game.showPartyMenu();
+                    Dialog.close();
+                    break;
+                case 8:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
     }
     
 }

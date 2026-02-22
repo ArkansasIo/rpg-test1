@@ -845,6 +845,67 @@ public class Player {
         else if (Input.isKeyJustPressed(KEY_CANCEL)) {
             TileMap.showMainMenu();
         }
+        else if (Input.isKeyJustPressed(KEY_WOW_INVENTORY)) {
+            Inventory.showSelectItemDialog();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_SPELLBOOK)) {
+            Magic.showSelectSpellDialog();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_CHARACTER)) {
+            showCompleteStatus();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_QUEST_LOG)) {
+            Game.showQuestMenu();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_WORLD_MAP)) {
+            Game.showWoWMapCatalog();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_SETTINGS)) {
+            Game.showSettingsMenuFromGame();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_PARTY)) {
+            Game.showPartyMenu();
+            Dialog.close();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_UI)) {
+            Game.showWoWUi();
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_1)) {
+            Game.onWoWHotbarPressed(1);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_2)) {
+            Game.onWoWHotbarPressed(2);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_3)) {
+            Game.onWoWHotbarPressed(3);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_4)) {
+            Game.onWoWHotbarPressed(4);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_5)) {
+            Game.onWoWHotbarPressed(5);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_6)) {
+            Game.onWoWHotbarPressed(6);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_7)) {
+            Game.onWoWHotbarPressed(7);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_8)) {
+            Game.onWoWHotbarPressed(8);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_9)) {
+            Game.onWoWHotbarPressed(9);
+        }
+        else if (Input.isKeyJustPressed(KEY_WOW_HOTBAR_10)) {
+            Game.onWoWHotbarPressed(10);
+        }
         
         Debug.update();
     }

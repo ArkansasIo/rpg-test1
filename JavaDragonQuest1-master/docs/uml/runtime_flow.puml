@@ -1,0 +1,56 @@
+@startuml
+title Java Dragon Quest 1 - Runtime Flow
+
+actor User
+participant Main
+participant View
+participant Game
+participant Resource
+participant Script
+participant Player
+participant TileMap
+participant Dialog
+participant Battle
+
+User -> Main : launch app
+Main -> View : setup canvas/window
+Main -> Game : start()
+
+Game -> Resource : load texts/music/enemies/items/spells/levels
+Game -> Script : register command providers
+Game -> Player : start()
+Game -> View : start()/fade in
+
+loop game loop
+  Game -> Game : state machine update
+
+  alt TITLE
+    Game -> Dialog : show title/options menu
+    User -> Dialog : choose action
+  else MAP
+    Game -> TileMap : update + check map events
+    Game -> Player : update movement/input
+    alt event triggered
+      TileMap -> Script : execute event label
+      Script -> Game : map/state commands
+      Script -> Dialog : text/options
+    end
+    alt random or forced encounter
+      Game -> Battle : start battle
+      Battle -> Dialog : combat messages/options
+      Battle -> Player : apply damage/rewards
+    end
+    Game -> View : redraw/refresh
+  else CHANGE_MAP
+    Game -> View : fade out
+    Game -> TileMap : switch current map
+    Game -> Player : relocate + facing
+    Game -> View : fade in
+  end
+end
+
+User -> Dialog : save/load requests
+Dialog -> Script : persist vars
+Script -> Script : save_<slot>.dat in user home
+
+@enduml

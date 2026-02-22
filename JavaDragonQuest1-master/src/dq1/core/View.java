@@ -69,7 +69,10 @@ public class View {
         offscreenTmp = new BufferedImage(256, 240, TYPE_INT_ARGB);
         og2dTmp = (Graphics2D) offscreenTmp.getGraphics();
         og2dTmp.setBackground(new Color(0, 0, 0, 0));
-        CANVAS.addKeyListener(new Input());
+        CANVAS.setFocusable(true);
+        Input input = new Input();
+        CANVAS.addKeyListener(input);
+        CANVAS.addMouseListener(input);
     }
     
     private static int effectX = 0;

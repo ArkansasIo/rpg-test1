@@ -9,6 +9,15 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Build MMORPG GameLogic",
+			"type": "shell",
+			"command": "javac -d build/classes src/mmorpg/game/GameLogic.java src/mmorpg/entities/*.java src/mmorpg/world/*.java src/mmorpg/map/*.java",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

@@ -10,6 +10,17 @@
 <project name="JavaDragonQuest1" default="default" basedir=".">
     <description>Builds, tests, and runs the project JavaDragonQuest1.</description>
     <import file="nbproject/build-impl.xml"/>
+        <!-- Custom targets to package assets into JAR -->
+        <target name="-pre-jar">
+            <copy todir="${build.classes.dir}/res">
+                <fileset dir="assets/res" includes="**/*"/>
+            </copy>
+        </target>
+        <target name="-post-jar">
+            <jar update="true" destfile="${dist.jar}">
+                <fileset dir="${build.classes.dir}/res" includes="**/*"/>
+            </jar>
+        </target>
     <!--
 
     There exist several targets which are by default empty and which can be 
