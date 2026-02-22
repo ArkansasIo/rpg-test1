@@ -1,6 +1,7 @@
 package dq1.editor;
 
 import dq1.editor.audio.AudioPlaybackUtil;
+import dq1.editor.audio.EditorAudioAPI;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -54,6 +55,7 @@ public class InspectorPanel extends JPanel {
             sizeLabel.setText("Size: -");
             modifiedLabel.setText("Modified: -");
             imagePreview.setIcon(null);
+            removeAllPlayListeners();
             playBtn.setEnabled(false);
             stopBtn.setEnabled(false);
             return;
@@ -70,6 +72,7 @@ public class InspectorPanel extends JPanel {
 
         // Reset preview and controls
         imagePreview.setIcon(null);
+        removeAllPlayListeners();
         playBtn.setEnabled(false);
         stopBtn.setEnabled(true);
 
@@ -78,7 +81,6 @@ public class InspectorPanel extends JPanel {
             if (name.endsWith(".wav") || name.endsWith(".aiff") || name.endsWith(".au") || name.endsWith(".mp3")) {
                 // enable play
                 playBtn.setEnabled(true);
-                playBtn.removeActionListener(playBtn.getActionListeners().length > 0 ? playBtn.getActionListeners()[0] : null);
                 playBtn.addActionListener(e -> {
                     try {
                         AudioPlaybackUtil.playFile(f);
@@ -101,6 +103,45 @@ public class InspectorPanel extends JPanel {
             }
         } catch (IOException ioe) {
             JOptionPane.showMessageDialog(this, "Preview error: " + ioe.getMessage());
+        }
+    }
+
+    public void inspectAttached(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            inspect((File) null);
+            return;
+        }
+        nameLabel.setText("Name: " + filename);
+        imagePreview.setIcon(null);
+        stopBtn.setEnabled(true);
+        removeAllPlayListeners();
+        // Try to resolve file and show size if present
+        File f = EditorAudioAPI.getAudioFile(filename);
+        if (f != null) {
+            try {
+                long size = Files.size(f.toPath());
+                sizeLabel.setText("Size: " + size + " bytes");
+            } catch (Exception e) {
+                sizeLabel.setText("Size: ?");
+            }
+            playBtn.setEnabled(true);
+            playBtn.addActionListener(e -> {
+                try {
+                    AudioPlaybackUtil.playFile(f);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Playback error: " + ex.getMessage());
+                }
+            });
+        } else {
+            sizeLabel.setText("Size: (not in assets)");
+            playBtn.setEnabled(true);
+            playBtn.addActionListener(e -> EditorAudioAPI.playFileByName(filename));
+        }
+    }
+
+    private void removeAllPlayListeners() {
+        for (java.awt.event.ActionListener al : playBtn.getActionListeners()) {
+            playBtn.removeActionListener(al);
         }
     }
 }

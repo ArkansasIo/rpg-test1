@@ -56,6 +56,15 @@ public class EditorAudioAPI {
         } catch (Exception ignored) {}
     }
 
+    // Convenience: play an audio file from assets/res/audio by filename
+    public static void playFileByName(String filename) {
+        try {
+            File f = getAudioFile(filename);
+            if (f == null) return;
+            AudioPlaybackUtil.playFile(f);
+        } catch (Exception ignored) {}
+    }
+
     private static double parseDouble(String json, String key, double def) {
         try {
             int idx = json.indexOf('"' + key + '"');

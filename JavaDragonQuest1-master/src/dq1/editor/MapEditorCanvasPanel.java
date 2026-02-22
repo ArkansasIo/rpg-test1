@@ -4,6 +4,8 @@ import dq1.core.GameAPI;
 import dq1.core.Resource;
 import dq1.core.Tile;
 import dq1.core.TileMap;
+import dq1.editor.audio.EditorAudioAPI;
+import dq1.editor.audio.AudioPlaybackUtil;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -24,6 +26,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JPopupMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 
 /**
@@ -385,6 +389,24 @@ public class MapEditorCanvasPanel extends JPanel {
         if (e.getButton() == MouseEvent.BUTTON3 && cellSelectionListener != null) {
             cellSelectionListener.accept(row, col);
         }
+
+        // right-click context for audio attachments
+        if (e.getButton() == MouseEvent.BUTTON3) {
+            String attached = getAudioAttachment(row, col);
+            JPopupMenu menu = new JPopupMenu();
+            JMenuItem play = new JMenuItem("Play Attached Audio");
+            JMenuItem clear = new JMenuItem("Clear Attached Audio");
+            play.addActionListener(ae -> {
+                if (attached != null) EditorAudioAPI.playFileByName(attached);
+            });
+            clear.addActionListener(ae -> {
+                setAudioAttachment(row, col, null);
+                repaint();
+            });
+            menu.add(play);
+            menu.add(clear);
+            menu.show(this, e.getX(), e.getY());
+        }
     }
 
     private void handleDrag(java.awt.event.MouseEvent e) {
@@ -610,6 +632,17 @@ public class MapEditorCanvasPanel extends JPanel {
                 if (showGrid) {
                     g2.setColor(new Color(0, 0, 0, 28));
                     g2.drawRect(col * tileSize, row * tileSize, tileSize, tileSize);
+                }
+
+                // draw audio marker if present
+                String attached = getAudioAttachment(row, col);
+                if (attached != null) {
+                    int ax = col * tileSize + 4;
+                    int ay = row * tileSize + 4;
+                    g2.setColor(new Color(255, 215, 0, 200));
+                    g2.fillOval(ax, ay, 10, 10);
+                    g2.setColor(Color.BLACK);
+                    g2.drawOval(ax, ay, 10, 10);
                 }
             }
         }
