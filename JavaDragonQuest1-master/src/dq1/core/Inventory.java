@@ -11,7 +11,7 @@ import java.util.List;
  * Note 1: there is a limit on the number of items you can take at a time.
  *         If the inventory is full and you take an item, it will ask you
  *         to discard an item. 
- *         Check: https://www.youtube.com/watch?v=rghmVPMY24I&t=376
+ *         Check: {@code https://www.youtube.com/watch?v=rghmVPMY24I&t=376}
  * 
  * Note 2: Important items can't be discarted.
  * 
