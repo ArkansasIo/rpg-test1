@@ -1,0 +1,5 @@
+enemy_id,name,tier,ai_role,level,base_hp,base_damage,affix
+2001,Forest Gnawer,COMMON_MOB,BRUTE,5,180,14,
+2002,Cult Adept,VETERAN_MOB,CASTER,12,620,48,ARCANE_SHIELD
+2003,Bone Colossus,ELITE,TANK,28,4200,215,REGENERATING
+2004,The Ash Warden,RARE_NAMED,CONTROLLER,35,7200,320,TOXIC

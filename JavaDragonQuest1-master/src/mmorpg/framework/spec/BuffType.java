@@ -1,0 +1,19 @@
+package mmorpg.framework.spec;
+
+public enum BuffType {
+    POWER_SURGE,
+    BERSERK,
+    ARCANE_AMPLIFY,
+    PRECISION,
+    SHIELDED,
+    FORTIFIED,
+    REGENERATION,
+    DAMAGE_ABSORPTION,
+    INVULNERABILITY_SHORT,
+    HASTE,
+    STEALTH,
+    FLIGHT,
+    INVISIBILITY,
+    TRUE_SIGHT,
+    PHASE_SHIFT
+}

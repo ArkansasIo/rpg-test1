@@ -1,0 +1,4 @@
+item_id,name,slot,rarity,pve_power,pvp_power,damage_type,notes
+1001,Ashen Blade,MAIN_HAND,EPIC,1240,690,FIRE,"PvE boss bonus, PvP anti-heal"
+1002,Stormguard Helm,HEAD,RARE,320,295,LIGHTNING,"Balanced tank head slot"
+1003,Nightglass Ring,RING_1,EPIC,180,150,ARCANE,"Crit and mana efficiency"

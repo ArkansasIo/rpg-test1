@@ -1,0 +1,3 @@
+boss_id,name,boss_class,level,phase_count,enrage_rule,loot_table
+3001,Citadel Warden Xal,RAID_BOSS,70,2,"Hard enrage at 8:00",raid_xal_tier1
+3002,Leviathan of Mire,WORLD_BOSS,60,3,"Soft enrage +12% every 20s",world_leviathan_t1

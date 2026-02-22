@@ -1,0 +1,6 @@
+loot_table_id,entry_type,entry_id,weight,min_qty,max_qty,lockout_rule
+raid_xal_tier1,CURRENCY,GOLD,100,250,400,weekly
+raid_xal_tier1,GEAR,1001,30,1,1,weekly
+raid_xal_tier1,COSMETIC,TITLE_ASHEN_VICTOR,5,1,1,weekly
+world_leviathan_t1,CURRENCY,GOLD,100,140,240,daily
+world_leviathan_t1,CRAFTING_MAT,VOID_SCALE,45,1,3,daily

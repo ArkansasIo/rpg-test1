@@ -21,16 +21,20 @@ import mmorpg.entities.FantasyEntityCatalog;
 import mmorpg.entities.FantasyEntityGroup;
 import mmorpg.entities.FantasyEntityProfile;
 import mmorpg.framework.FrameworkGameplayService;
+import mmorpg.framework.spec.CombatFrameworkModule;
 import mmorpg.game.ClassSpecializationTree;
 import mmorpg.game.CraftingSystem;
 import mmorpg.game.DungeonFinderQueue;
 import mmorpg.game.FeatureRegistry;
+import mmorpg.game.MmorpgMvpService;
 import mmorpg.game.PartySyncService;
 import mmorpg.ui.DiabloInventoryFrame;
 import mmorpg.ui.WowMapCatalogFrame;
 import mmorpg.ui.WowUiFrame;
 import mmorpg.world.WoWTileMapSystem;
 import java.awt.Graphics2D;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GradientPaint;
@@ -54,6 +58,10 @@ import javax.swing.SwingUtilities;
  * @author Leonardo Ono (ono.leo80@gmail.com)
  */
 public class Game {
+    private static javax.swing.JFrame gameFrame;
+    private static final GraphicsDevice GRAPHICS_DEVICE
+            = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+
         public static void main(String[] args) {
             try {
                 start();
@@ -125,15 +133,15 @@ public class Game {
 
     public static void start() throws Exception {
                 // Initialize game window and canvas
-                javax.swing.JFrame frame = new javax.swing.JFrame(
+                gameFrame = new javax.swing.JFrame(
                         Settings.GAME_TITLE + " (" + Settings.GAME_VERSION + ")");
-                frame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
-                frame.setResizable(false);
-                frame.add(View.getCanvas());
-                frame.pack();
-                frame.setSize(Settings.VIEWPORT_WIDTH, Settings.VIEWPORT_HEIGHT);
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
+                gameFrame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
+                gameFrame.setResizable(false);
+                gameFrame.add(View.getCanvas());
+                gameFrame.pack();
+                gameFrame.setSize(Settings.screenWidth, Settings.screenHeight);
+                gameFrame.setLocationRelativeTo(null);
+                gameFrame.setVisible(true);
                 // Wait for canvas and graphics to initialize
                 try { Thread.sleep(500); } catch (InterruptedException ignored) {}
             TEXTS = Resource.getTexts(RES_TEXTS_INF);
@@ -152,6 +160,7 @@ public class Game {
         CraftingSystem.initializeDefaults();
         DungeonFinderQueue.reset();
         PartySyncService.initializeDefaults(Player.getName(), Player.getLV(), "world");
+        seedMmorpgMvpCharacterIfNeeded();
         try {
             WoWZoneSystem.loadFromInfAssets(Path.of("assets", "res", "inf"));
         }
@@ -716,6 +725,7 @@ public class Game {
         drawWowPlayerFrame(g);
         drawWowQuestTracker(g);
         drawWowZoneFrame(g);
+        drawWowWorldMapPanel(g);
         drawWowActionBar(g);
     }
 
@@ -803,6 +813,105 @@ public class Game {
         g.setFont(new Font("SansSerif", Font.PLAIN, 9));
         g.setColor(new Color(182, 199, 216));
         g.drawString("X:" + Player.getMapCol() + " Y:" + Player.getMapRow(), x + 5, y + 22);
+    }
+
+    private static void drawWowWorldMapPanel(Graphics2D g) {
+        if (!Settings.SHOW_WOW_WORLD_MAP_OVERLAY) {
+            return;
+        }
+
+        int x = 146;
+        int y = 106;
+        int w = 104;
+        int h = 92;
+        int mapX = x + 6;
+        int mapY = y + 16;
+        int mapW = w - 12;
+        int mapH = h - 26;
+        drawHudPanel(g, x, y, w, h, new Color(22, 22, 28, 190), new Color(154, 130, 88, 220));
+
+        g.setFont(new Font("SansSerif", Font.BOLD, 9));
+        g.setColor(new Color(236, 221, 184));
+        g.drawString("WORLD MAP", x + 7, y + 11);
+
+        g.setColor(new Color(58, 52, 40, 220));
+        g.fillRect(mapX, mapY, mapW, mapH);
+        g.setColor(new Color(120, 101, 72, 180));
+        for (int gridX = mapX + 10; gridX < mapX + mapW; gridX += 12) {
+            g.drawLine(gridX, mapY, gridX, mapY + mapH);
+        }
+        for (int gridY = mapY + 8; gridY < mapY + mapH; gridY += 10) {
+            g.drawLine(mapX, gridY, mapX + mapW, gridY);
+        }
+
+        String currentMapName = getCurrentMapDisplayName();
+        int activeZoneId = findActiveZoneIdByMapName(currentMapName);
+        List<String> continents = new ArrayList<>();
+        for (WoWZoneSystem.WoWZone zone : WoWZoneSystem.zones) {
+            if (!continents.contains(zone.continent)) {
+                continents.add(zone.continent);
+            }
+        }
+        int continentCount = Math.max(1, continents.size());
+
+        for (WoWZoneSystem.WoWZone zone : WoWZoneSystem.zones) {
+            int continentIndex = Math.max(0, continents.indexOf(zone.continent));
+            int zx = mapX + 4 + (int) (((zone.id * 37L) % (mapW - 8)));
+            int zyBase = mapY + 5 + (continentIndex * Math.max(8, (mapH - 10) / continentCount));
+            int zyRange = Math.max(1, Math.max(8, (mapH - 14) / continentCount) - 2);
+            int zy = zyBase + (int) (((zone.id * 23L) % zyRange));
+
+            boolean active = zone.id == activeZoneId;
+            if (active) {
+                g.setColor(new Color(248, 218, 102));
+                g.fillOval(zx - 3, zy - 3, 7, 7);
+            }
+            else {
+                g.setColor(new Color(186, 104, 78, 210));
+                g.fillOval(zx - 2, zy - 2, 4, 4);
+            }
+        }
+
+        if (activeZoneId > 0) {
+            long pulse = (System.currentTimeMillis() / 160) % 2;
+            g.setColor(pulse == 0 ? new Color(136, 221, 255) : new Color(84, 180, 235));
+            int px = mapX + 8 + (Player.getMapCol() * 3) % Math.max(10, mapW - 16);
+            int py = mapY + 8 + (Player.getMapRow() * 2) % Math.max(10, mapH - 16);
+            g.fillOval(px - 3, py - 3, 6, 6);
+        }
+
+        g.setFont(new Font("SansSerif", Font.PLAIN, 8));
+        g.setColor(new Color(208, 208, 208));
+        String name = currentMapName.length() > 14 ? currentMapName.substring(0, 14) : currentMapName;
+        g.drawString(name, x + 7, y + h - 5);
+    }
+
+    private static String getCurrentMapDisplayName() {
+        Object mapNameObj = Script.getGlobalValue("$$current_map_name");
+        if (mapNameObj == null) {
+            return "Unknown Zone";
+        }
+        String mapName = mapNameObj.toString().trim();
+        if (mapName.isEmpty()) {
+            return "Unknown Zone";
+        }
+        return mapName;
+    }
+
+    private static int findActiveZoneIdByMapName(String mapName) {
+        String key = mapName.toLowerCase().replace('_', ' ');
+        int fallback = -1;
+        for (WoWZoneSystem.WoWZone zone : WoWZoneSystem.zones) {
+            String zoneName = zone.name.toLowerCase();
+            if (zoneName.equals(key) || key.equals(zoneName)
+                    || zoneName.contains(key) || key.contains(zoneName)) {
+                return zone.id;
+            }
+            if (fallback < 0 && key.contains(zone.biome.toLowerCase())) {
+                fallback = zone.id;
+            }
+        }
+        return fallback;
     }
 
     private static void drawWowActionBar(Graphics2D g) {
@@ -1627,19 +1736,25 @@ public class Game {
         while (!exit) {
             String[] options = new String[] {
                 "Auto Skip Story: " + (Settings.SKIP_INTRO_STORY ? "ON" : "OFF"),
+                "World Map Overlay: " + (Settings.SHOW_WOW_WORLD_MAP_OVERLAY ? "ON" : "OFF"),
                 "Show Controls Help",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(8, 10, 24, 5, -1, options);
+            int option = Dialog.showOptionsMenu(8, 10, 30, 6, -1, options);
             switch (option) {
                 case 0:
                     Settings.SKIP_INTRO_STORY = !Settings.SKIP_INTRO_STORY;
                     showUiToast("Auto Skip Story: " + (Settings.SKIP_INTRO_STORY ? "ON" : "OFF"));
                     break;
                 case 1:
-                    showUiHelpMenu();
+                    Settings.SHOW_WOW_WORLD_MAP_OVERLAY = !Settings.SHOW_WOW_WORLD_MAP_OVERLAY;
+                    showUiToast("World Map Overlay: "
+                            + (Settings.SHOW_WOW_WORLD_MAP_OVERLAY ? "ON" : "OFF"));
                     break;
                 case 2:
+                    showUiHelpMenu();
+                    break;
+                case 3:
                 case -1:
                     exit = true;
                     break;
@@ -1659,48 +1774,118 @@ public class Game {
     }
 
     private static void changeScreenResolution() {
-        String[] resolutions = new String[] {
-            "640x480",
-            "800x600",
-            "1024x768",
-            "1280x960",
-            "Toggle Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"),
-            "Back"
-        };
         boolean exit = false;
         while (!exit) {
-            int option = Dialog.showOptionsMenu(10, 10, 30, 8, -1, resolutions);
+            String[] options = new String[] {
+                "Display Mode: " + (Settings.fullscreen ? "Fullscreen" : "Windowed"),
+                "Graphics API: " + Settings.DISPLAY_API,
+                "Set HD (1366x768)",
+                "Set 720p (1280x720)",
+                "Set 1080p (1920x1080)",
+                "Set 4K (3840x2160)",
+                "HDR: " + (Settings.HDR_ENABLED ? "ON" : "OFF"),
+                "Apply Display Settings",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(6, 8, 34, 12, -1, options);
             switch (option) {
                 case 0:
-                    Settings.screenWidth = 640;
-                    Settings.screenHeight = 480;
-                    showUiToast("Resolution set to 640x480");
+                    Settings.fullscreen = !Settings.fullscreen;
+                    applyDisplaySettings();
+                    showUiToast("Display Mode: " + (Settings.fullscreen ? "Fullscreen" : "Windowed"));
                     break;
                 case 1:
-                    Settings.screenWidth = 800;
-                    Settings.screenHeight = 600;
-                    showUiToast("Resolution set to 800x600");
+                    cycleDisplayApi();
+                    showUiToast("Graphics API: " + Settings.DISPLAY_API);
                     break;
                 case 2:
-                    Settings.screenWidth = 1024;
-                    Settings.screenHeight = 768;
-                    showUiToast("Resolution set to 1024x768");
+                    setResolution(1366, 768, "HD 1366x768");
                     break;
                 case 3:
-                    Settings.screenWidth = 1280;
-                    Settings.screenHeight = 960;
-                    showUiToast("Resolution set to 1280x960");
+                    setResolution(1280, 720, "720p");
                     break;
                 case 4:
-                    Settings.fullscreen = !Settings.fullscreen;
-                    showUiToast("Fullscreen: " + (Settings.fullscreen ? "ON" : "OFF"));
+                    setResolution(1920, 1080, "1080p");
                     break;
                 case 5:
+                    setResolution(3840, 2160, "4K");
+                    break;
+                case 6:
+                    Settings.HDR_ENABLED = !Settings.HDR_ENABLED;
+                    showUiToast("HDR: " + (Settings.HDR_ENABLED ? "ON" : "OFF"));
+                    break;
+                case 7:
+                    applyDisplaySettings();
+                    showUiToast("Applied: " + Settings.screenWidth + "x" + Settings.screenHeight);
+                    break;
+                case 8:
                 case -1:
                     exit = true;
                     break;
             }
         }
+    }
+
+    private static void cycleDisplayApi() {
+        switch (Settings.DISPLAY_API) {
+            case "AUTO":
+                Settings.DISPLAY_API = "DIRECTX";
+                break;
+            case "DIRECTX":
+                Settings.DISPLAY_API = "OPENGL";
+                break;
+            case "OPENGL":
+                Settings.DISPLAY_API = "VULKAN";
+                break;
+            default:
+                Settings.DISPLAY_API = "AUTO";
+                break;
+        }
+    }
+
+    private static void setResolution(int width, int height, String label) {
+        Settings.screenWidth = width;
+        Settings.screenHeight = height;
+        applyDisplaySettings();
+        showUiToast("Resolution: " + label);
+    }
+
+    private static void applyDisplaySettings() {
+        if (gameFrame == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                gameFrame.dispose();
+                if (Settings.fullscreen) {
+                    if (GRAPHICS_DEVICE.isFullScreenSupported()) {
+                        gameFrame.setUndecorated(true);
+                        gameFrame.setResizable(false);
+                        GRAPHICS_DEVICE.setFullScreenWindow(gameFrame);
+                    }
+                    else {
+                        Settings.fullscreen = false;
+                        gameFrame.setUndecorated(false);
+                        gameFrame.setResizable(false);
+                        gameFrame.setSize(Settings.screenWidth, Settings.screenHeight);
+                        gameFrame.setLocationRelativeTo(null);
+                    }
+                }
+                else {
+                    GRAPHICS_DEVICE.setFullScreenWindow(null);
+                    gameFrame.setUndecorated(false);
+                    gameFrame.setResizable(false);
+                    gameFrame.setSize(Settings.screenWidth, Settings.screenHeight);
+                    gameFrame.setLocationRelativeTo(null);
+                }
+                if (!gameFrame.isVisible()) {
+                    gameFrame.setVisible(true);
+                }
+                View.getCanvas().requestFocusInWindow();
+            }
+            catch (Exception ignored) {
+            }
+        });
     }
 
     private static void remapControlsMenu() {
@@ -2199,10 +2384,11 @@ public class Game {
                 "Crafting Professions",
                 "Dungeon Finder Queue",
                 "Party Sync / Raid Logic",
+                "MMORPG MVP Systems",
                 "Feature Coverage",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(9, 10, 31, 14, -1, options);
+            int option = Dialog.showOptionsMenu(8, 9, 33, 16, -1, options);
             switch (option) {
                 case 0:
                     showRpgCharacterSummary();
@@ -2238,9 +2424,12 @@ public class Game {
                     showPartySyncMenu();
                     break;
                 case 11:
-                    showFeatureCoverage();
+                    showMmoMvpSystemsMenu();
                     break;
                 case 12:
+                    showFeatureCoverage();
+                    break;
+                case 13:
                 case -1:
                     exit = true;
                     break;
@@ -2605,9 +2794,11 @@ public class Game {
                 "Boss Scaling Simulation",
                 "Buff/Debuff DR Simulation",
                 "PvE vs PvP Balance",
+                "Full Framework Spec Tick",
+                "Framework Game Log",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(8, 9, 30, 7, -1, options);
+            int option = Dialog.showOptionsMenu(8, 9, 32, 9, -1, options);
             switch (option) {
                 case 0:
                     showSimplePanel("COMBAT FORMULAS",
@@ -2626,6 +2817,12 @@ public class Game {
                             FrameworkGameplayService.simulatePvePvpBalanceLines());
                     break;
                 case 4:
+                    showSimplePanel("FRAMEWORK SPEC", CombatFrameworkModule.runDemoTick());
+                    break;
+                case 5:
+                    showSimplePanel("FRAMEWORK LOG", CombatFrameworkModule.tailGameLogLines(10));
+                    break;
+                case 6:
                 case -1:
                     exit = true;
                     break;
@@ -2881,6 +3078,240 @@ public class Game {
                     break;
             }
         }
+    }
+
+    private static void seedMmorpgMvpCharacterIfNeeded() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        if (!mvp.getCharacters().isEmpty()) {
+            return;
+        }
+        String baseName = Player.getName();
+        if (baseName == null || baseName.isBlank()) {
+            baseName = "HERO";
+        }
+        mvp.createCharacter(baseName
+                , MmorpgMvpService.Race.HUMAN
+                , MmorpgMvpService.Archetype.WARRIOR
+                , new MmorpgMvpService.Appearance("Short", "Brown", "Light")
+                , "Starter Valley");
+    }
+
+    private static void showMmoMvpSystemsMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "MVP Summary",
+                "Character: Create / Select",
+                "Movement Simulation",
+                "Combat + Threat Simulation",
+                "NPC AI Simulation",
+                "Loot / Quest / Progression",
+                "Social / Economy / Mail",
+                "Persistence + Security + GM",
+                "Post-MVP Tracker",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(7, 8, 34, 12, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("MMORPG MVP", MmorpgMvpService.get().buildMvpSummaryLines());
+                    break;
+                case 1:
+                    showMmoMvpCharacterPanel();
+                    break;
+                case 2:
+                    showMmoMvpMovementPanel();
+                    break;
+                case 3:
+                    showMmoMvpCombatPanel();
+                    break;
+                case 4:
+                    showMmoMvpNpcPanel();
+                    break;
+                case 5:
+                    showMmoMvpLootQuestPanel();
+                    break;
+                case 6:
+                    showMmoMvpSocialEconomyPanel();
+                    break;
+                case 7:
+                    showMmoMvpPersistSecurityPanel();
+                    break;
+                case 8:
+                    showSimplePanel("POST-MVP", MmorpgMvpService.get().buildPostMvpLines());
+                    break;
+                case 9:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showMmoMvpCharacterPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Create Character",
+                "Select Next Character",
+                "View Selected",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(9, 9, 30, 6, -1, options);
+            switch (option) {
+                case 0:
+                    String base = Player.getName();
+                    if (base == null || base.isBlank()) {
+                        base = "Hero";
+                    }
+                    int suffix = mvp.getCharacters().size() + 1;
+                    String newName = base + suffix;
+                    MmorpgMvpService.CharacterState created = mvp.createCharacter(newName
+                            , MmorpgMvpService.Race.values()[suffix % MmorpgMvpService.Race.values().length]
+                            , MmorpgMvpService.Archetype.values()[suffix % MmorpgMvpService.Archetype.values().length]
+                            , new MmorpgMvpService.Appearance("Style" + suffix, "Color" + suffix, "Tone" + suffix)
+                            , suffix % 2 == 0 ? "Eastern Kingdoms" : "Kalimdor");
+                    showUiToast(created == null ? "Name not unique or invalid." : "Created: " + created.name);
+                    break;
+                case 1:
+                    List<MmorpgMvpService.CharacterState> chars = mvp.getCharacters();
+                    if (chars.isEmpty()) {
+                        showUiToast("No characters.");
+                        break;
+                    }
+                    MmorpgMvpService.CharacterState selected = mvp.getSelectedCharacter();
+                    int idx = chars.indexOf(selected);
+                    int next = (idx + 1 + chars.size()) % chars.size();
+                    mvp.selectCharacter(chars.get(next).id);
+                    showUiToast("Selected: " + chars.get(next).name);
+                    break;
+                case 2:
+                    MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+                    if (c == null) {
+                        showSimplePanel("CHARACTER", List.of("No character selected."));
+                    }
+                    else {
+                        showSimplePanel("CHARACTER", List.of(
+                                "Name: " + c.name,
+                                "Race/Class: " + c.race + " / " + c.archetype,
+                                "Appearance: " + c.appearance.hairStyle + ", " + c.appearance.hairColor,
+                                "Start Zone: " + c.zone,
+                                "Lv " + c.level + " XP " + c.xp + " TP " + c.talentPoints));
+                    }
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showMmoMvpMovementPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+        if (c == null) {
+            showSimplePanel("MOVEMENT", List.of("No character selected."));
+            return;
+        }
+        mvp.setMounted(c, !c.mounted);
+        double speed = mvp.move(c, 2, 1, c.level % 2 == 0, 7.5);
+        showSimplePanel("WORLD & MOVEMENT", List.of(
+                "Zone: " + c.zone,
+                "Navmesh move speed factor: " + String.format("%.2f", speed),
+                "Mounted: " + (c.mounted ? "ON" : "OFF"),
+                "Swimming: " + (c.swimming ? "YES" : "NO"),
+                "Fall damage model applied (if drop > 5).",
+                "Position: (" + String.format("%.1f", c.x) + ", " + String.format("%.1f", c.y) + ")"));
+    }
+
+    private static void showMmoMvpCombatPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+        if (c == null) {
+            showSimplePanel("COMBAT", List.of("No character selected."));
+            return;
+        }
+        MmorpgMvpService.CombatOutcome hit = mvp.castAbility(c, "Training Dummy", 18, 85, 72);
+        int heal = mvp.heal(c, 12);
+        List<String> lines = new ArrayList<>();
+        lines.add("Targeting: selected -> Training Dummy");
+        lines.add("Ability result: " + hit.message);
+        lines.add("Resources: Mana " + c.mana + "/" + c.maxMana
+                + " Energy " + c.energy + " Rage " + c.rage);
+        lines.add("Heal: +" + heal + " HP");
+        lines.add("CC support: stun/root/silence baseline available.");
+        lines.addAll(mvp.getThreatLines());
+        showSimplePanel("CORE COMBAT LOOP", lines);
+    }
+
+    private static void showMmoMvpNpcPanel() {
+        List<String> lines = MmorpgMvpService.get().simulateNpcAiTick("Cult Sorcerer", 4, 12);
+        showSimplePanel("NPC AI", lines);
+    }
+
+    private static void showMmoMvpLootQuestPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+        if (c == null) {
+            showSimplePanel("LOOT / QUEST", List.of("No character selected."));
+            return;
+        }
+        List<String> lines = new ArrayList<>();
+        lines.addAll(mvp.rollLoot("Field Boss", true, 5));
+        if (mvp.acceptQuest("q_mvp_001")) {
+            lines.add("Quest accepted: q_mvp_001");
+        }
+        mvp.advanceObjective("q_mvp_001", 0, 1);
+        mvp.advanceObjective("q_mvp_001", 1, 1);
+        if (mvp.turnInQuest(c, "q_mvp_001")) {
+            lines.add("Quest turned in: rewards granted.");
+        }
+        lines.add("Inventory slots: " + c.inventory.size() + "/" + c.bagSlots);
+        lines.add("Durability: " + c.durability + "% (repair supported)");
+        lines.add("Level: " + c.level + " XP: " + c.xp + " Talent points: " + c.talentPoints);
+        showSimplePanel("LOOT / QUEST / XP", lines);
+    }
+
+    private static void showMmoMvpSocialEconomyPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+        if (c == null) {
+            showSimplePanel("SOCIAL / ECONOMY", List.of("No character selected."));
+            return;
+        }
+        mvp.sendChat(MmorpgMvpService.ChatChannel.ZONE, c.name, "Looking for group.");
+        mvp.addFriend("Alyra");
+        mvp.vendorBuy(c, "Copper Sword", 45);
+        mvp.sendMail(c.name, "Welcome package delivered.");
+        showSimplePanel("SOCIAL / ECONOMY", List.of(
+                "Chat channels: zone/party/guild",
+                "Friends: " + mvp.getFriends().size(),
+                "Currency: " + c.currency,
+                "Vendor + mail systems active.",
+                "Mailbox entries: " + mvp.getMailBox().size()));
+    }
+
+    private static void showMmoMvpPersistSecurityPanel() {
+        MmorpgMvpService mvp = MmorpgMvpService.get();
+        MmorpgMvpService.CharacterState c = mvp.getSelectedCharacter();
+        if (c == null) {
+            showSimplePanel("PERSIST / SECURITY", List.of("No character selected."));
+            return;
+        }
+        mvp.gmTeleport(c, "GM_Test_Zone", 100, 200);
+        mvp.gmGrantItem(c, "GM Epic Token", 1);
+        Map<String, Object> snapshot = mvp.snapshot(c);
+        List<String> lines = new ArrayList<>();
+        lines.add("Persistence snapshot fields: " + snapshot.size());
+        lines.add("Crash recovery baseline: snapshot map generated.");
+        lines.add("Server-authoritative baseline: action gate + validation.");
+        lines.add("Input validation + rate limiting enabled.");
+        lines.add("GM commands: teleport/spawn(grant item).");
+        lines.add("Audit log tail:");
+        lines.addAll(mvp.getAuditLogTail(3));
+        showSimplePanel("PERSISTENCE / SECURITY", lines);
     }
 
     private static RpgActionResult equipFirstAvailableGear(RpgRuntimeService runtime) {

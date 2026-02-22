@@ -52,6 +52,20 @@ public final class FeatureRegistry {
         list.add(new FeatureEntry("Inventory and equipment", Status.IMPLEMENTED, "dq1/rpg"));
         list.add(new FeatureEntry("Buff/debuff runtime effects", Status.PARTIAL, "rpg"));
         list.add(new FeatureEntry("Class specialization trees", Status.IMPLEMENTED, "mmorpg"));
+        list.add(new FeatureEntry("Character create/select + unique names", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Appearance + race/class + starting zone", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("World movement: mount/swim/fall damage", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Core combat: threat/resources/crit/hit-avoid", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("NPC AI: patrol/leash/aggro/cast/loot", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Loot tables + personal/party rewards", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Quest objectives kill/collect/visit/talk", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Progression XP/level/skill unlock/talent points", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Instancing and lockout baseline", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Social channels/friends/party/raid baseline", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Economy: vendor/currency/mail baseline", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Persistence + crash-recovery snapshot", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Security baseline: validation/rate limits", Status.IMPLEMENTED, "mvp"));
+        list.add(new FeatureEntry("Admin tools: GM commands + audit logs", Status.IMPLEMENTED, "mvp"));
         list.add(new FeatureEntry("Multiplayer networking", Status.MISSING, "mmorpg"));
         list.add(new FeatureEntry("Guild and social backend", Status.MISSING, "mmorpg"));
         list.add(new FeatureEntry("Auction house economy", Status.MISSING, "mmorpg"));
@@ -59,6 +73,7 @@ public final class FeatureRegistry {
         list.add(new FeatureEntry("Map catalog with biome/tile details", Status.IMPLEMENTED, "world/ui"));
         list.add(new FeatureEntry("Graphical world map browser", Status.IMPLEMENTED, "ui"));
         list.add(new FeatureEntry("Hotbar keybind integration", Status.IMPLEMENTED, "dq1"));
+        list.add(new FeatureEntry("RPG/MMORPG combat framework spec module", Status.IMPLEMENTED, "framework/spec"));
         list.add(new FeatureEntry("Talent/passive build planner", Status.IMPLEMENTED, "mmorpg"));
         list.add(new FeatureEntry("Crafting professions", Status.IMPLEMENTED, "mmorpg"));
         list.add(new FeatureEntry("Dungeon finder queue", Status.IMPLEMENTED, "mmorpg"));

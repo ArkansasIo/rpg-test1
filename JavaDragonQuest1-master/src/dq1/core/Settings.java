@@ -94,6 +94,8 @@ public class Settings {
     public static int screenWidth = VIEWPORT_WIDTH;
     public static int screenHeight = VIEWPORT_HEIGHT;
     public static boolean fullscreen = false;
+    public static String DISPLAY_API = "AUTO";
+    public static boolean HDR_ENABLED = false;
     public static int keyConfirm = KEY_CONFIRM;
     public static int keyCancel = KEY_CANCEL;
     public static int keyUp = KEY_UP;
@@ -102,4 +104,5 @@ public class Settings {
     public static int keyRight = KEY_RIGHT;
     public static boolean MOUSE_ENABLED = true;
     public static boolean SKIP_INTRO_STORY = false;
+    public static boolean SHOW_WOW_WORLD_MAP_OVERLAY = true;
 }
