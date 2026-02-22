@@ -7,6 +7,7 @@ public final class RpgSystems {
 
     private static boolean initialized;
     private static PlayerRpgProfile profile;
+    private static RpgRuntimeService runtime;
 
     private RpgSystems() { }
 
@@ -16,6 +17,9 @@ public final class RpgSystems {
         }
         RpgContentDatabase.initialize();
         profile = RpgContentDatabase.createDefaultProfile();
+        runtime = new RpgRuntimeService(profile, RpgContentDatabase.getItemDefinitions());
+        runtime.seedDefaultHotbar();
+        runtime.exportToGlobals();
         initialized = true;
     }
 
@@ -26,6 +30,21 @@ public final class RpgSystems {
     public static PlayerRpgProfile getProfile() {
         bootstrap();
         return profile;
+    }
+
+    public static RpgRuntimeService getRuntime() {
+        bootstrap();
+        return runtime;
+    }
+
+    public static void exportRuntimeToGlobals() {
+        bootstrap();
+        runtime.exportToGlobals();
+    }
+
+    public static void importRuntimeFromGlobals() {
+        bootstrap();
+        runtime.importFromGlobals();
     }
 
     public static List<String> buildSummaryLines() {
@@ -48,6 +67,28 @@ public final class RpgSystems {
         lines.add("HP " + stats.get(RpgAttribute.MAX_HP)
                 + "  MP " + stats.get(RpgAttribute.MAX_MP)
                 + "  LUCK " + stats.get(RpgAttribute.LUCK));
+        return lines;
+    }
+
+    public static List<String> buildEquipmentLines() {
+        bootstrap();
+        List<String> lines = new ArrayList<>();
+        lines.add("Equipped:");
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            RpgItemDefinition item = profile.getEquipment().getEquippedItems().get(slot);
+            lines.add(slot.name() + ": " + (item == null ? "(none)" : item.getName()));
+        }
+        return lines;
+    }
+
+    public static List<String> buildClassLines() {
+        bootstrap();
+        List<String> lines = new ArrayList<>();
+        lines.add("Current class: " + profile.getCharacterClass().name());
+        lines.add("Available classes:");
+        for (CharacterClass c : CharacterClass.values()) {
+            lines.add("- " + c.name());
+        }
         return lines;
     }
 }

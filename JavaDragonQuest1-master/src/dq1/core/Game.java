@@ -2,12 +2,25 @@ package dq1.core;
 
 import static dq1.core.Game.State.*;
 import dq1.core.rpg.BuffDebuffManager;
+import dq1.core.rpg.CharacterClass;
+import dq1.core.rpg.EquipmentSlot;
 import dq1.core.rpg.InventorySystem;
 import dq1.core.rpg.PlayerRpgProfile;
+import dq1.core.rpg.RpgActionResult;
+import dq1.core.rpg.RpgActionType;
+import dq1.core.rpg.RpgRuntimeService;
 import dq1.core.rpg.RpgSystems;
+import dq1.core.wowui.WowPanelId;
+import dq1.core.wowui.WowPanelModel;
+import dq1.core.wowui.WowUiFramework;
 import dq1.core.Script.ScriptCommand;
 import static dq1.core.Settings.*;
 import dq1.core.TileMap.Area;
+import mmorpg.entities.FantasyEntityCatalog;
+import mmorpg.entities.FantasyEntityGroup;
+import mmorpg.entities.FantasyEntityProfile;
+import mmorpg.game.FeatureRegistry;
+import mmorpg.ui.WowMapCatalogFrame;
 import mmorpg.ui.WowUiFrame;
 import mmorpg.world.WoWTileMapSystem;
 import java.awt.Graphics2D;
@@ -16,6 +29,7 @@ import java.awt.event.KeyEvent;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -39,6 +53,7 @@ public class Game {
         }
     
     public static enum State { OL_PRESENTS, TITLE, MAP, CHANGE_MAP }
+    private static final WowUiFramework WOW_UI = WowUiFramework.createDefault();
     
     private static Properties TEXTS;
     
@@ -360,7 +375,8 @@ public class Game {
     }
     
     private static final KeyHandler KEY_HANDLER = new KeyHandler();
-    private static final char[] PLAYER_NAME = new char[5];
+    private static final int PLAYER_NAME_MAX_LENGTH = 12;
+    private static final char[] PLAYER_NAME = new char[PLAYER_NAME_MAX_LENGTH];
     private static int playerNameCursorIndex = 0;
     private static boolean playerNameConfirmed = false;
     private static boolean playerNameCanceled = false;
@@ -375,25 +391,30 @@ public class Game {
     private static boolean startGameTypePlayersName() throws Exception{
         View.clear(3, "0x00000000");
         
-        Dialog.fillBox(3, ' ', 6, 22, 24, 23);
-        Dialog.drawBoxBorder(3, 5, 21, 25, 24);
+        Dialog.fillBox(3, ' ', 5, 22, 27, 23);
+        Dialog.drawBoxBorder(3, 4, 21, 28, 24);
         Dialog.printText(3, 6, 22, "ENTER - Confirm");
         Dialog.printText(3, 6, 23, "  ESC - Cancel");
         
-        Dialog.fillBox(3, ' ', 6, 17, 24, 19);
-        Dialog.drawBoxBorder(3, 5, 16, 25, 20);
+        Dialog.fillBox(3, ' ', 5, 17, 27, 19);
+        Dialog.drawBoxBorder(3, 4, 16, 28, 20);
         Dialog.printText(3, 6, 17, "TYPE YOUR NAME:");
+        Dialog.printText(3, 6, 18, "(max 12 chars)");
         
         Input.setListener(KEY_HANDLER);
         long blinkTime = System.nanoTime();
         while (!playerNameConfirmed && !playerNameCanceled) {
             synchronized (KEY_HANDLER) {
-                for (int i = 0; i < 5; i++) {
-                    Dialog.print(3, 13 + i, 19, PLAYER_NAME[i]);
+                for (int i = 0; i < PLAYER_NAME_MAX_LENGTH; i++) {
+                    Dialog.print(3, 7 + i, 19, PLAYER_NAME[i]);
                 }
                 if ((int) ((System.nanoTime() - blinkTime) 
                                             * 0.0000000035) % 2 == 0) {            
-                    Dialog.print(3, 13 + playerNameCursorIndex, 19, 16);
+                    int cursorCol = 7 + playerNameCursorIndex;
+                    if (cursorCol > 18) {
+                        cursorCol = 18;
+                    }
+                    Dialog.print(3, cursorCol, 19, 16);
                 }
             }
             Game.sleep(1000 / 60);
@@ -412,7 +433,7 @@ public class Game {
         }
     }
     
-    private static final String VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_";
     
     private static class KeyHandler extends KeyAdapter {
 
@@ -434,7 +455,7 @@ public class Game {
                 }
                 else if (VALID_CHARS.indexOf(
                         Character.toUpperCase(e.getKeyChar())) >= 0  
-                            && playerNameCursorIndex < 4) {
+                            && playerNameCursorIndex < PLAYER_NAME_MAX_LENGTH) {
                     
                     PLAYER_NAME[playerNameCursorIndex++] 
                             = Character.toUpperCase(e.getKeyChar());
@@ -790,6 +811,7 @@ public class Game {
                 if (saveConfirmation == 0) {
                     Dialog.clear();
                     Player.updatePlayingTime();
+                    RpgSystems.exportRuntimeToGlobals();
                     if (Script.saveVars(selectedItem + 1)) {
                         Dialog.print(
                             0, 1, Game.getText("@@game_saved_successfully"));
@@ -875,6 +897,7 @@ public class Game {
         
         Script.getVARS().clear();
         Script.getVARS().putAll(loadedGlobalVars);
+        RpgSystems.importRuntimeFromGlobals();
         Audio.applyConfigValues();
         Dialog.applyConfigValues();
         Battle.applyConfigValues();
@@ -1585,28 +1608,90 @@ public class Game {
         try {
             WoWTileMapSystem mapSystem
                     = WoWTileMapSystem.loadFromGameAssets(Path.of("assets", "res", "map"));
-            Dialog.clear();
-            Dialog.print(0, 0, "WoW Tile Map System");
-            Dialog.print(0, 1, "Total Maps: " + mapSystem.getMaps().size());
-            int max = Math.min(3, mapSystem.getMaps().size());
-            for (int i = 0; i < max; i++) {
-                WoWTileMapSystem.MapRecord map = mapSystem.getMaps().get(i);
-                Dialog.print(0, 1, "#" + map.getMapId()
-                        + " " + map.getMapTitle()
-                        + " [" + map.getBiome() + "] "
-                        + map.getRows() + "x" + map.getCols()
-                        + " tiles=" + map.getTileCount());
+            List<WoWTileMapSystem.MapRecord> maps = mapSystem.getMaps();
+            if (maps.isEmpty()) {
+                showSimplePanel("WOW MAP CATALOG", List.of("No map files found."));
+                return;
             }
-            Dialog.print(0, 1, "Use --wow-maps for full list.");
+
+            final int pageSize = 7;
+            int page = 0;
+            boolean exit = false;
+            while (!exit) {
+                int totalPages = (maps.size() + pageSize - 1) / pageSize;
+                int start = page * pageSize;
+                int end = Math.min(start + pageSize, maps.size());
+
+                List<String> options = new ArrayList<>();
+                for (int i = start; i < end; i++) {
+                    WoWTileMapSystem.MapRecord map = maps.get(i);
+                    options.add("#" + map.getMapId() + " " + map.getMapTitle());
+                }
+                boolean hasPrev = page > 0;
+                boolean hasNext = page < totalPages - 1;
+                if (hasPrev) {
+                    options.add("< Prev Page");
+                }
+                if (hasNext) {
+                    options.add("Next Page >");
+                }
+                options.add("Back");
+
+                int option = Dialog.showOptionsMenu(
+                        4, 5, 33, options.size() + 2, -1,
+                        options.toArray(new String[0]));
+
+                int mapCountInPage = end - start;
+                if (option >= 0 && option < mapCountInPage) {
+                    showWoWMapDetailsPanel(maps.get(start + option));
+                    continue;
+                }
+
+                int cursor = mapCountInPage;
+                if (hasPrev) {
+                    if (option == cursor) {
+                        page--;
+                        continue;
+                    }
+                    cursor++;
+                }
+                if (hasNext) {
+                    if (option == cursor) {
+                        page++;
+                        continue;
+                    }
+                    cursor++;
+                }
+                if (option == cursor || option == -1) {
+                    exit = true;
+                }
+            }
         } catch (Exception ex) {
-            Dialog.clear();
-            Dialog.print(0, 0, "WoW Map catalog error.");
-            Dialog.print(0, 1, ex.getMessage() == null ? "Unknown error." : ex.getMessage());
+            showSimplePanel("WOW MAP CATALOG",
+                    List.of("Catalog error.",
+                            ex.getMessage() == null ? "Unknown error." : ex.getMessage()));
         }
     }
 
+    private static void showWoWMapDetailsPanel(WoWTileMapSystem.MapRecord map) {
+        List<String> lines = new ArrayList<>();
+        lines.add("ID: " + map.getMapId() + "   File: " + map.getMapFileId());
+        lines.add("Title: " + map.getMapTitle());
+        lines.add("Biome: " + map.getBiome());
+        lines.add("Size: " + map.getRows() + "x" + map.getCols());
+        lines.add("Tiles: " + map.getTileCount());
+        lines.add("Top tile IDs:");
+
+        map.getTileIdCounts().entrySet().stream()
+                .sorted(Map.Entry.<Integer, Integer>comparingByValue(Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(e -> lines.add("tileId " + e.getKey() + " -> " + e.getValue()));
+
+        showSimplePanel("WOW MAP DETAILS", lines);
+    }
+
     private static void showWoWMapGraphical() {
-        SwingUtilities.invokeLater(() -> new WowUiFrame().setVisible(true));
+        SwingUtilities.invokeLater(() -> new WowMapCatalogFrame().setVisible(true));
     }
 
     public static void showWoWMapCatalog() throws Exception {
@@ -1614,7 +1699,50 @@ public class Game {
     }
 
     public static void showWoWUi() {
-        showWoWMapGraphical();
+        boolean exit = false;
+        while (!exit) {
+            String[] options = WOW_UI.getHubMenuOptions();
+            int option = Dialog.showOptionsMenu(8, 8, 30, 11, -1, options);
+            if (option == -1 || option >= WOW_UI.getHubOrder().size()) {
+                exit = true;
+                continue;
+            }
+
+            WowPanelId panelId = WOW_UI.getHubOrder().get(option);
+            switch (panelId) {
+                case CHARACTER:
+                    showWoWCharacterPanel();
+                    break;
+                case INVENTORY:
+                    showWoWInventoryPanel();
+                    break;
+                case QUESTS:
+                    showQuestMenu();
+                    break;
+                case WORLD_MAP:
+                    try {
+                        showWoWMapCatalog();
+                    }
+                    catch (Exception ex) {
+                        showSimplePanel("WOW WORLD MAP",
+                                List.of("Failed to open map catalog.",
+                                        ex.getMessage() == null ? "Unknown error." : ex.getMessage()));
+                    }
+                    break;
+                case PARTY:
+                    showPartyMenu();
+                    break;
+                case HOTBAR:
+                    showWoWHotbarPanel();
+                    break;
+                case KEYBINDS:
+                    showWoWKeybindPanel();
+                    break;
+                case EXTERNAL_FRAME:
+                    SwingUtilities.invokeLater(() -> new WowUiFrame().setVisible(true));
+                    break;
+            }
+        }
     }
 
     public static void showSettingsMenuFromGame() {
@@ -1628,9 +1756,12 @@ public class Game {
                 "RPG Character Summary",
                 "RPG Inventory Overview",
                 "RPG Buffs / Debuffs",
+                "RPG Runtime Actions",
+                "Fantasy Entity Catalog (600)",
+                "Feature Coverage",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(9, 10, 30, 6, -1, options);
+            int option = Dialog.showOptionsMenu(9, 10, 30, 9, -1, options);
             switch (option) {
                 case 0:
                     showRpgCharacterSummary();
@@ -1642,6 +1773,15 @@ public class Game {
                     showRpgBuffDebuffOverview();
                     break;
                 case 3:
+                    showRpgRuntimeActions();
+                    break;
+                case 4:
+                    showFantasyEntityCatalogMenu();
+                    break;
+                case 5:
+                    showFeatureCoverage();
+                    break;
+                case 6:
                 case -1:
                     exit = true;
                     break;
@@ -1650,7 +1790,253 @@ public class Game {
     }
 
     public static void onWoWHotbarPressed(int slot) {
-        showUiToast("Hotbar slot " + slot + " activated.");
+        RpgActionResult result = RpgSystems.getRuntime().applyHotbarEffect(slot);
+        if (result.isSuccess()) {
+            RpgSystems.getRuntime().nextTurn();
+        }
+        showUiToast(result.getMessage());
+    }
+
+    private static void showWoWCharacterPanel() {
+        WowPanelModel model = WOW_UI.getPanel(WowPanelId.CHARACTER);
+        List<String> lines = new ArrayList<>();
+        lines.add(model.getSubtitle());
+        lines.addAll(RpgSystems.buildSummaryLines());
+        lines.addAll(RpgSystems.buildEquipmentLines().subList(0, 3));
+        lines.add("Shortcut: " + keyName(Settings.KEY_WOW_CHARACTER));
+        lines.add("Open panel key: " + keyName(Settings.KEY_WOW_UI));
+        showSimplePanel(model.getTitle(), lines);
+    }
+
+    private static void showWoWInventoryPanel() {
+        WowPanelModel model = WOW_UI.getPanel(WowPanelId.INVENTORY);
+        PlayerRpgProfile profile = RpgSystems.getProfile();
+        InventorySystem inventory = profile.getInventory();
+        List<String> lines = new ArrayList<>();
+        lines.add(model.getSubtitle());
+        lines.add("Slots: " + inventory.getUsedSlots() + "/" + inventory.getMaxSlots());
+        lines.add("Shortcut: " + keyName(Settings.KEY_WOW_INVENTORY));
+        lines.add("Top items:");
+        int shown = 0;
+        for (InventorySystem.InventoryEntry entry : inventory.getEntries()) {
+            if (shown >= 5) {
+                break;
+            }
+            lines.add("- " + entry.getDefinition().getName() + " x" + entry.getQuantity());
+            shown++;
+        }
+        if (shown == 0) {
+            lines.add("Inventory is empty.");
+        }
+        showSimplePanel(model.getTitle(), lines);
+    }
+
+    private static void showWoWHotbarPanel() {
+        WowPanelModel model = WOW_UI.getPanel(WowPanelId.HOTBAR);
+        List<String> lines = new ArrayList<>();
+        lines.add(model.getSubtitle());
+        lines.add("Slot 1 key: " + keyName(Settings.KEY_WOW_HOTBAR_1));
+        lines.add("Slot 2 key: " + keyName(Settings.KEY_WOW_HOTBAR_2));
+        lines.add("Slot 3 key: " + keyName(Settings.KEY_WOW_HOTBAR_3));
+        lines.add("Slot 4 key: " + keyName(Settings.KEY_WOW_HOTBAR_4));
+        lines.add("Slot 5 key: " + keyName(Settings.KEY_WOW_HOTBAR_5));
+        lines.addAll(RpgSystems.getRuntime().buildHotbarLines().subList(0, 5));
+        showSimplePanel(model.getTitle(), lines);
+    }
+
+    private static void showWoWKeybindPanel() {
+        WowPanelModel model = WOW_UI.getPanel(WowPanelId.KEYBINDS);
+        List<String> lines = new ArrayList<>();
+        lines.add(model.getSubtitle());
+        lines.add("UI Hub: " + keyName(Settings.KEY_WOW_UI));
+        lines.add("Character: " + keyName(Settings.KEY_WOW_CHARACTER));
+        lines.add("Inventory: " + keyName(Settings.KEY_WOW_INVENTORY));
+        lines.add("Spellbook: " + keyName(Settings.KEY_WOW_SPELLBOOK));
+        lines.add("Quest Log: " + keyName(Settings.KEY_WOW_QUEST_LOG));
+        lines.add("World Map: " + keyName(Settings.KEY_WOW_WORLD_MAP));
+        lines.add("Party: " + keyName(Settings.KEY_WOW_PARTY));
+        lines.add("Settings: " + keyName(Settings.KEY_WOW_SETTINGS));
+        lines.add("Confirm: " + keyName(Settings.KEY_CONFIRM));
+        lines.add("Cancel: " + keyName(Settings.KEY_CANCEL));
+        showSimplePanel(model.getTitle(), lines);
+    }
+
+    private static void showRpgRuntimeActions() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Equip first inventory gear",
+                "Unequip main hand",
+                "Use first consumable",
+                "Change class",
+                "Advance effect turn",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 9, 31, 8, -1, options);
+            RpgRuntimeService runtime = RpgSystems.getRuntime();
+            RpgActionResult result;
+            switch (option) {
+                case 0:
+                    result = equipFirstAvailableGear(runtime);
+                    showUiToast(result.getMessage());
+                    break;
+                case 1:
+                    result = runtime.unequipToInventory(EquipmentSlot.MAIN_HAND);
+                    showUiToast(result.getMessage());
+                    break;
+                case 2:
+                    result = useFirstConsumable(runtime);
+                    showUiToast(result.getMessage());
+                    break;
+                case 3:
+                    showClassSelector(runtime);
+                    break;
+                case 4:
+                    runtime.nextTurn();
+                    showUiToast("Advanced one RPG turn.");
+                    break;
+                case 5:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showFantasyEntityCatalogMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Catalog Summary",
+                "Group Counts",
+                "Sample Entries",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 9, 30, 6, -1, options);
+            switch (option) {
+                case 0:
+                    showFantasySummaryPanel();
+                    break;
+                case 1:
+                    showFantasyGroupCountPanel();
+                    break;
+                case 2:
+                    showFantasySampleSelector();
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showFantasySummaryPanel() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Fantasy Taxonomy Loaded");
+        lines.add("Base types: " + FantasyEntityCatalog.getArchetypeCount());
+        lines.add("Profiles: " + FantasyEntityCatalog.getProfileCount());
+        lines.add("Groups: MONSTER, NPC, CREATURE, ANIMAL");
+        lines.add("Each profile has class/subclass/subtype.");
+        showSimplePanel("FANTASY CATALOG", lines);
+    }
+
+    private static void showFantasyGroupCountPanel() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Group distribution:");
+        Map<FantasyEntityGroup, Integer> counts = FantasyEntityCatalog.getGroupCounts();
+        for (FantasyEntityGroup group : FantasyEntityGroup.values()) {
+            lines.add(group.name() + ": " + counts.getOrDefault(group, 0));
+        }
+        showSimplePanel("FANTASY GROUP COUNTS", lines);
+    }
+
+    private static void showFantasySampleSelector() {
+        String[] options = new String[] {
+            "Monsters",
+            "NPCs",
+            "Creatures",
+            "Animals",
+            "Back"
+        };
+        int option = Dialog.showOptionsMenu(10, 9, 22, 7, -1, options);
+        switch (option) {
+            case 0:
+                showFantasySamplesByGroup(FantasyEntityGroup.MONSTER);
+                break;
+            case 1:
+                showFantasySamplesByGroup(FantasyEntityGroup.NPC);
+                break;
+            case 2:
+                showFantasySamplesByGroup(FantasyEntityGroup.CREATURE);
+                break;
+            case 3:
+                showFantasySamplesByGroup(FantasyEntityGroup.ANIMAL);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private static void showFantasySamplesByGroup(FantasyEntityGroup group) {
+        List<FantasyEntityProfile> profiles = FantasyEntityCatalog.getByGroup(group);
+        List<String> lines = new ArrayList<>();
+        lines.add(group.name() + " sample:");
+        int shown = 0;
+        for (FantasyEntityProfile profile : profiles) {
+            if (shown >= 7) {
+                break;
+            }
+            lines.add("#" + profile.getId()
+                    + " T" + profile.getTypeId()
+                    + " " + profile.getTypeName()
+                    + " " + profile.getEntityClass());
+            shown++;
+        }
+        lines.add("Total " + group.name() + ": " + profiles.size());
+        showSimplePanel("FANTASY SAMPLE", lines);
+    }
+
+    private static RpgActionResult equipFirstAvailableGear(RpgRuntimeService runtime) {
+        for (InventorySystem.InventoryEntry entry : RpgSystems.getProfile().getInventory().getEntries()) {
+            if (entry.getDefinition().getSlot() != null) {
+                return runtime.equipFromInventory(entry.getDefinition().getId());
+            }
+        }
+        return RpgActionResult.fail(RpgActionType.NONE, "No equippable item found.");
+    }
+
+    private static RpgActionResult useFirstConsumable(RpgRuntimeService runtime) {
+        for (InventorySystem.InventoryEntry entry : RpgSystems.getProfile().getInventory().getEntries()) {
+            if (entry.getDefinition().getKind() == dq1.core.rpg.ItemKind.CONSUMABLE) {
+                return runtime.useConsumable(entry.getDefinition().getId());
+            }
+        }
+        return RpgActionResult.fail(RpgActionType.NONE, "No consumable item found.");
+    }
+
+    private static void showClassSelector(RpgRuntimeService runtime) {
+        CharacterClass[] classes = CharacterClass.values();
+        String[] options = new String[classes.length + 1];
+        for (int i = 0; i < classes.length; i++) {
+            options[i] = classes[i].name();
+        }
+        options[classes.length] = "Back";
+        int selection = Dialog.showOptionsMenu(10, 8, 20, classes.length + 3, -1, options);
+        if (selection >= 0 && selection < classes.length) {
+            RpgActionResult result = runtime.changeClass(classes[selection]);
+            showUiToast(result.getMessage());
+        }
+    }
+
+    private static void showFeatureCoverage() {
+        List<String> lines = new ArrayList<>();
+        lines.addAll(FeatureRegistry.buildSummaryLines());
+        lines.add("Missing:");
+        for (FeatureRegistry.FeatureEntry feature : FeatureRegistry.getMissingFeatures(4)) {
+            lines.add("- " + feature.getName());
+        }
+        showSimplePanel("FEATURE COVERAGE", lines);
     }
 
     private static void showRpgCharacterSummary() {

@@ -21,6 +21,9 @@ import java.util.List;
  * @author Leonardo Ono (ono.leo80@gmail.com)
  */
 public class Item {
+        private int level = 1;
+        public int getLevel() { return level; }
+        public void setLevel(int level) { this.level = Math.max(1, Math.min(720, level)); }
     
     public static final Item EMPTY = new Item(0, ITEM, "", 0, 0, 0, 0, 0
             , false, false, false, 0, false, false, false, false, 0, "Basic", "Normal", "None", "None", 0);
@@ -62,6 +65,20 @@ public class Item {
             , boolean relievesHurt, boolean relievesBreath
             , boolean protectsTerrain, int healPerStepInMilli
             , String itemClass, String itemType, String attribute, String subtype, int subStat) {
+
+        this(id, type, name, buy, sell, atk, def, maxCount, useInBattle, useInMap
+                , disposable, itemsPerSlot, immuneToStopSpell, relievesHurt
+                , relievesBreath, protectsTerrain, healPerStepInMilli
+                , itemClass, itemType, attribute, subtype, subStat, 1);
+    }
+
+    public Item(int id, Type type, String name
+            , int buy, int sell, int atk, int def
+            , int maxCount, boolean useInBattle, boolean useInMap
+            , boolean disposable, int itemsPerSlot, boolean immuneToStopSpell
+            , boolean relievesHurt, boolean relievesBreath
+            , boolean protectsTerrain, int healPerStepInMilli
+            , String itemClass, String itemType, String attribute, String subtype, int subStat, int level) {
         
         this.id = id;
         this.type = type;
@@ -87,9 +104,11 @@ public class Item {
         this.attribute = attribute;
         this.subtype = subtype;
         this.subStat = subStat;
+        this.level = Math.max(1, Math.min(720, level));
     }
     
     public Item(String serializedData) {
+            level = 1;
         String[] args = serializedData.trim().split(",");
         String[] h = args[0].trim().split("\\s+");
         id = Integer.parseInt(h[1]);

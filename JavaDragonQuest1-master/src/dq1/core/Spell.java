@@ -6,7 +6,21 @@ package dq1.core;
  * @author Leonardo Ono (ono.leo@gmail.com)
  */
 public class Spell {
+    // Names and descriptions for 800 spell schools and classes
+    public static final String[] SCHOOL_NAMES = new String[800];
+    public static final String[] SCHOOL_DESCRIPTIONS = new String[800];
+    public static final String[] CLASS_NAMES = new String[800];
+    public static final String[] CLASS_DESCRIPTIONS = new String[800];
 
+    static {
+        for (int i = 0; i < 800; i++) {
+            SCHOOL_NAMES[i] = "School " + (i + 1);
+            SCHOOL_DESCRIPTIONS[i] = "Description for School " + (i + 1);
+            CLASS_NAMES[i] = "Magic Class " + (i + 1);
+            CLASS_DESCRIPTIONS[i] = "Description for Magic Class " + (i + 1);
+        }
+    }
+    
     public static final Spell EMPTY 
             = new Spell(0, "", 0, 0, false, false, "Arcane", "Basic", "Normal", "None", "None", 0);
     
@@ -23,6 +37,8 @@ public class Spell {
     private final String attribute;
     private final String subtype;
     private final int subStat;
+    private int schoolIndex = 0; // 0-799
+    private int magicClassIndex = 0; // 0-799
 
     private Script script;
 
@@ -106,6 +122,38 @@ public class Spell {
 
     public int getSubStat() {
         return subStat;
+    }
+
+    public int getSchool() {
+        return schoolIndex;
+    }
+
+    public void setSchool(int school) {
+        this.schoolIndex = Math.max(0, Math.min(799, school));
+    }
+
+    public int getMagicClass() {
+        return magicClassIndex;
+    }
+
+    public void setMagicClass(int magicClass) {
+        this.magicClassIndex = Math.max(0, Math.min(799, magicClass));
+    }
+
+    public String getSchoolName() {
+        return SCHOOL_NAMES[schoolIndex];
+    }
+
+    public String getSchoolDescription() {
+        return SCHOOL_DESCRIPTIONS[schoolIndex];
+    }
+
+    public String getMagicClassName() {
+        return CLASS_NAMES[magicClassIndex];
+    }
+
+    public String getMagicClassDescription() {
+        return CLASS_DESCRIPTIONS[magicClassIndex];
     }
 
     public Script getScript() {

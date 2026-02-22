@@ -13,6 +13,9 @@ import java.awt.image.BufferedImage;
  * @author Leonardo Ono (ono.leo80@gmail.com)
  */
 public class Player {
+        private static int level = 1;
+        public static int getLevel() { return level; }
+        public static void setLevel(int lv) { level = Math.max(1, Math.min(720, lv)); Script.setGlobalValue("##player_lv", level); }
     
     private static Animation animation;
     private static int walking = -1;
@@ -155,6 +158,13 @@ public class Player {
     }
 
     public static String getName() {
+        String playerName = Script.getGlobalValue("$$player_name").toString()
+                + "            ";
+        playerName = playerName.substring(0, 12);
+        return playerName.trim();
+    }
+
+    public static String getShortName() {
         String playerName = Script.getGlobalValue("$$player_name").toString()
                 + "    ";
         playerName = playerName.substring(0, 4);
@@ -1049,10 +1059,7 @@ public class Player {
         Dialog.printText(2, 2, 11, "G");
         Dialog.printText(2, 2, 13, "E");
 
-        String playerName = 
-                Script.getGlobalValue("$$player_name").toString() + "    ";
-        
-        playerName = playerName.substring(0, 4);
+        String playerName = getShortName();
         Dialog.printText(2, 3, 3, playerName);
         
         Dialog.print(2, 2, 3, 15);
