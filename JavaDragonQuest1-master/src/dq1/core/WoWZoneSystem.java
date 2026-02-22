@@ -4,6 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WoWZoneSystem {
+        public static class Activity {
+            public enum Type { DUNGEON, RAID, TRIAL, TOWER }
+            public final Type type;
+            public final String name;
+            public Activity(Type type, String name) {
+                this.type = type;
+                this.name = name;
+            }
+        }
     public static final List<WoWZone> zones = new ArrayList<>();
 
     static {
@@ -29,16 +38,30 @@ public class WoWZoneSystem {
         public final String biome;
         public final String biomeTitle;
         public final List<WoWSubZone> subZones = new ArrayList<>();
+        public final List<Activity> activities = new ArrayList<>();
         public WoWZone(String name, String biome, String biomeTitle) {
             this.name = name;
             this.biome = biome;
             this.biomeTitle = biomeTitle;
+            // Example activities per zone
+            activities.add(new Activity(Activity.Type.DUNGEON, name + " Caverns"));
+            activities.add(new Activity(Activity.Type.RAID, name + " Citadel"));
+            activities.add(new Activity(Activity.Type.TRIAL, name + " Arena"));
+            activities.add(new Activity(Activity.Type.TOWER, name + " Tower"));
         }
     }
 
     public static class WoWSubZone {
         public final String name;
-        public WoWSubZone(String name) { this.name = name; }
+        public final List<Activity> activities = new ArrayList<>();
+        public WoWSubZone(String name) {
+            this.name = name;
+            // Example activities per subzone
+            activities.add(new Activity(Activity.Type.DUNGEON, name + " Depths"));
+            activities.add(new Activity(Activity.Type.RAID, name + " Fortress"));
+            activities.add(new Activity(Activity.Type.TRIAL, name + " Challenge"));
+            activities.add(new Activity(Activity.Type.TOWER, name + " Spire"));
+        }
     }
 
     public static List<String> getAllZoneTitles() {

@@ -1,0 +1,20 @@
+package mmorpg.framework;
+
+public enum SecondaryStat {
+    PHYSICAL_POWER,
+    SPELL_POWER,
+    ARMOR_PENETRATION,
+    MAGIC_PENETRATION,
+    ATTACK_SPEED,
+    CAST_SPEED,
+    ACCURACY,
+    EVASION,
+    CRIT_CHANCE,
+    CRIT_DAMAGE,
+    HP_REGEN,
+    MP_REGEN,
+    DAMAGE_REDUCTION,
+    BLOCK_CHANCE,
+    PARRY_CHANCE,
+    TENACITY
+}

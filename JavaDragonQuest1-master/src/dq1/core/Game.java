@@ -19,12 +19,17 @@ import dq1.core.TileMap.Area;
 import mmorpg.entities.FantasyEntityCatalog;
 import mmorpg.entities.FantasyEntityGroup;
 import mmorpg.entities.FantasyEntityProfile;
+import mmorpg.framework.FrameworkGameplayService;
 import mmorpg.game.FeatureRegistry;
 import mmorpg.ui.DiabloInventoryFrame;
 import mmorpg.ui.WowMapCatalogFrame;
 import mmorpg.ui.WowUiFrame;
 import mmorpg.world.WoWTileMapSystem;
 import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.nio.file.Path;
@@ -221,6 +226,10 @@ public class Game {
     }
     
     private static void updateOLPresents() throws Exception {
+        if (showCustomSplashLogo()) {
+            state = TITLE;
+            return;
+        }
         if (Settings.SKIP_INTRO_STORY) {
             state = TITLE;
             return;
@@ -259,6 +268,82 @@ public class Game {
         }
         View.fadeOut();
         state = TITLE;
+    }
+
+    private static boolean showCustomSplashLogo() {
+        if (Settings.SKIP_INTRO_STORY) {
+            return true;
+        }
+
+        Graphics2D g1 = View.getOffscreenGraphics2D(1);
+        Graphics2D g2 = View.getOffscreenGraphics2D(2);
+        Graphics2D g3 = View.getOffscreenGraphics2D(3);
+        long start = System.currentTimeMillis();
+        long durationMs = 2800;
+
+        while (true) {
+            long now = System.currentTimeMillis();
+            long elapsed = now - start;
+            if (elapsed >= durationMs) {
+                break;
+            }
+            if (isSkipRequested()) {
+                return true;
+            }
+
+            double t = elapsed / (double) durationMs;
+            double glow = Math.sin(t * Math.PI);
+            int r = (int) (20 + 35 * glow);
+            int g = (int) (22 + 18 * glow);
+            int b = (int) (30 + 10 * glow);
+
+            g1.setPaint(new GradientPaint(0, 0, new Color(r, g, b),
+                    0, 240, new Color(8, 10, 14)));
+            g1.fillRect(0, 0, 256, 240);
+
+            g2.setBackground(new Color(0, 0, 0, 0));
+            g2.clearRect(0, 0, 256, 240);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int logoW = (int) (172 + 10 * glow);
+            int logoH = (int) (68 + 4 * glow);
+            int logoX = 128 - logoW / 2;
+            int logoY = 88 - logoH / 2;
+
+            g2.setColor(new Color(0, 0, 0, 150));
+            g2.fillRoundRect(logoX + 3, logoY + 3, logoW, logoH, 18, 18);
+            g2.setColor(new Color(185, 140, 72));
+            g2.drawRoundRect(logoX, logoY, logoW, logoH, 18, 18);
+            g2.setColor(new Color(245, 216, 160, 210));
+            g2.drawRoundRect(logoX + 1, logoY + 1, logoW - 2, logoH - 2, 16, 16);
+
+            g2.setColor(new Color(240, 228, 198));
+            g2.setFont(new Font("Serif", Font.BOLD, 24));
+            g2.drawString("ELDRION LEGENDS", 48, 94);
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(213, 196, 155));
+            g2.drawString("A New Fantasy RPG Experience", 67, 112);
+            g2.setColor(new Color(160, 160, 170));
+            g2.drawString("Press Confirm/Cancel to skip", 70, 206);
+
+            g3.setBackground(new Color(0, 0, 0, 0));
+            g3.clearRect(0, 0, 256, 240);
+            int fadeAlpha = 0;
+            if (t < 0.22) {
+                fadeAlpha = (int) (220 * (1.0 - t / 0.22));
+            }
+            else if (t > 0.88) {
+                fadeAlpha = (int) (240 * ((t - 0.88) / 0.12));
+            }
+            if (fadeAlpha > 0) {
+                g3.setColor(new Color(0, 0, 0, Math.min(255, fadeAlpha)));
+                g3.fillRect(0, 0, 256, 240);
+            }
+
+            View.refresh();
+            Game.sleep(1000 / 60);
+        }
+        return false;
     }
     
     private static void updateTitle() throws Exception {
@@ -326,6 +411,11 @@ public class Game {
                         playerNameCanceled = false;
                         exit = startGameTypePlayersName(); 
                         if (exit) {
+                            boolean characterCreated = startCharacterCreationScreen();
+                            if (!characterCreated) {
+                                optionMenuOk = false;
+                                continue;
+                            }
                             Dialog.fillBox(3, ' ', 19, 14, 29, 15);
                             Dialog.drawBoxBorder(3, 18, 13, 30, 16);
                             Dialog.printText(3, 19, 14, getText("@@title_keyboard_5"));
@@ -436,6 +526,52 @@ public class Game {
             Audio.playSound(Audio.SOUND_SHOW_OPTIONS_MENU);
             return true;
         }
+    }
+
+    private static boolean startCharacterCreationScreen() {
+        RpgRuntimeService runtime = RpgSystems.getRuntime();
+        CharacterClass[] classes = CharacterClass.values();
+        CharacterClass currentClass = RpgSystems.getProfile().getCharacterClass();
+        int selectedClass = currentClass.ordinal();
+
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[classes.length + 2];
+            for (int i = 0; i < classes.length; i++) {
+                String marker = i == selectedClass ? "* " : "  ";
+                options[i] = marker + classes[i].name();
+            }
+            options[classes.length] = "Confirm Character";
+            options[classes.length + 1] = "Back";
+
+            Dialog.clear();
+            Dialog.print(0, 0, "Character Creation");
+            Dialog.print(0, 1, "Name: " + Player.getName());
+            Dialog.print(0, 1, "Choose class and confirm.");
+            int option = Dialog.showOptionsMenu(
+                    6, 6, 28, classes.length + 4, -1, options);
+
+            if (option >= 0 && option < classes.length) {
+                selectedClass = option;
+                runtime.changeClass(classes[selectedClass]);
+                runtime.autoEquipBestLoadout();
+                runtime.autoBindHotbar();
+                RpgSystems.getProfile().resetResourcesToMax();
+                runtime.exportToGlobals();
+            }
+            else if (option == classes.length) {
+                runtime.changeClass(classes[selectedClass]);
+                runtime.autoEquipBestLoadout();
+                runtime.autoBindHotbar();
+                RpgSystems.getProfile().resetResourcesToMax();
+                runtime.exportToGlobals();
+                return true;
+            }
+            else if (option == classes.length + 1 || option == -1) {
+                return false;
+            }
+        }
+        return false;
     }
     
     private static final String VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_";
@@ -1781,10 +1917,11 @@ public class Game {
                 "RPG Buffs / Debuffs",
                 "RPG Runtime Actions",
                 "Fantasy Entity Catalog (600)",
+                "Combat Framework Demo",
                 "Feature Coverage",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(9, 10, 30, 9, -1, options);
+            int option = Dialog.showOptionsMenu(9, 10, 30, 10, -1, options);
             switch (option) {
                 case 0:
                     showRpgCharacterSummary();
@@ -1802,9 +1939,12 @@ public class Game {
                     showFantasyEntityCatalogMenu();
                     break;
                 case 5:
-                    showFeatureCoverage();
+                    showCombatFrameworkDemoMenu();
                     break;
                 case 6:
+                    showFeatureCoverage();
+                    break;
+                case 7:
                 case -1:
                     exit = true;
                     break;
@@ -2028,6 +2168,37 @@ public class Game {
         }
         lines.add("Total " + group.name() + ": " + profiles.size());
         showSimplePanel("FANTASY SAMPLE", lines);
+    }
+
+    private static void showCombatFrameworkDemoMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Formula Summary",
+                "Boss Scaling Simulation",
+                "Buff/Debuff DR Simulation",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 9, 30, 6, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("COMBAT FORMULAS",
+                            FrameworkGameplayService.buildFrameworkSummaryLines());
+                    break;
+                case 1:
+                    showSimplePanel("BOSS SCALING",
+                            FrameworkGameplayService.simulateBossLines());
+                    break;
+                case 2:
+                    showSimplePanel("EFFECT ENGINE",
+                            FrameworkGameplayService.simulateEffectEngineLines());
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
     }
 
     private static RpgActionResult equipFirstAvailableGear(RpgRuntimeService runtime) {
