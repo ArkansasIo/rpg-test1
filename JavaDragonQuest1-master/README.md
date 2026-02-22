@@ -1,3 +1,27 @@
+## 31. Visual Scripting System (Editor Integration)
+
+This project includes a minimal node-based Visual Scripting Editor inspired by Unreal Blueprints, integrated into the Monster Editor.
+
+- Access: In the Monster Editor, select a monster and click "Open Visual Scripting" to open the editor for that monster.
+- Features: Add nodes (Event, Action, Variable), connect nodes visually, drag nodes, save/load scripts per monster.
+- Each monster can have a unique script file associated with it, enabling per-monster logic and behaviors.
+- Scripts can be executed (currently prints execution order; future integration will allow scripts to drive monster AI/behavior).
+
+### How to Use
+
+1. Open the Monster Editor panel.
+2. Select a monster row.
+3. Click "Open Visual Scripting".
+4. Create or load a script for the selected monster.
+5. Save the script to associate it with the monster.
+
+### Technical Notes
+
+- Script files are saved as `.vsgraph` files (simple text format).
+- Each script is associated with a monster row by index.
+- The system is designed for future expansion to allow scripts to control monster actions in-game.
+
+---
 # RPG / MMORPG Combat Framework README
 
 This document is a complete, production-grade RPG/MMORPG systems specification for:

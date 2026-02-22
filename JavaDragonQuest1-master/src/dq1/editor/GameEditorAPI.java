@@ -77,8 +77,20 @@ public class GameEditorAPI {
         return GameEditorRuntimeAPI.setCurrentMapTile(row, col, tileId);
     }
 
+    public boolean setMapTile(String mapId, int row, int col, int tileId) {
+        return GameEditorRuntimeAPI.setMapTile(mapId, row, col, tileId);
+    }
+
     public int getCurrentMapTileId(int row, int col) {
         return GameEditorRuntimeAPI.getCurrentMapTileId(row, col);
+    }
+
+    public int getMapTileId(String mapId, int row, int col) {
+        return GameEditorRuntimeAPI.getMapTileId(mapId, row, col);
+    }
+
+    public List<Integer> getMapTileIds(String mapId) {
+        return GameEditorRuntimeAPI.getMapTileIds(mapId);
     }
 
     public String exportMapToCsv(String mapId, String outputPath) {

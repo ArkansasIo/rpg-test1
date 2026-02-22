@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import mmorpg.game.FeatureRegistry;
@@ -108,6 +109,20 @@ public final class GameAPI {
         return true;
     }
 
+    public static boolean setMapTile(String mapId, int row, int col, int tileId) {
+        try {
+            TileMap map = Resource.getTileMap(mapId);
+            if (map == null) {
+                return false;
+            }
+            map.setTile(row, col, tileId);
+            return true;
+        }
+        catch (Exception e) {
+            return false;
+        }
+    }
+
     public static int getCurrentMapTileId(int row, int col) {
         TileMap map = Game.getCurrentMap();
         if (map == null) {
@@ -115,6 +130,35 @@ public final class GameAPI {
         }
         Tile tile = map.getTile(row, col);
         return tile == null ? -1 : tile.getId();
+    }
+
+    public static int getMapTileId(String mapId, int row, int col) {
+        try {
+            TileMap map = Resource.getTileMap(mapId);
+            if (map == null) {
+                return -1;
+            }
+            Tile tile = map.getTile(row, col);
+            return tile == null ? -1 : tile.getId();
+        }
+        catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public static List<Integer> getMapTileIds(String mapId) {
+        try {
+            TileMap map = Resource.getTileMap(mapId);
+            if (map == null) {
+                return Collections.emptyList();
+            }
+            List<Integer> ids = new ArrayList<>(map.getTileSet().keySet());
+            ids.sort(Comparator.naturalOrder());
+            return ids;
+        }
+        catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 
     public static String exportMapToCsv(String mapId, String outputRelativePath) {

@@ -34,8 +34,20 @@ public final class GameEditorRuntimeAPI {
         return GameAPI.setCurrentMapTile(row, col, tileId);
     }
 
+    public static boolean setMapTile(String mapId, int row, int col, int tileId) {
+        return GameAPI.setMapTile(mapId, row, col, tileId);
+    }
+
     public static int getCurrentMapTileId(int row, int col) {
         return GameAPI.getCurrentMapTileId(row, col);
+    }
+
+    public static int getMapTileId(String mapId, int row, int col) {
+        return GameAPI.getMapTileId(mapId, row, col);
+    }
+
+    public static List<Integer> getMapTileIds(String mapId) {
+        return GameAPI.getMapTileIds(mapId);
     }
 
     public static String exportMapToCsv(String mapId, String outputPath) {

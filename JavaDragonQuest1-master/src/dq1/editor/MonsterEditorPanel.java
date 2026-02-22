@@ -9,10 +9,13 @@ import javax.swing.table.DefaultTableModel;
 /**
  * Full-detail Monster Editor Panel for RPG/MMORPG engine.
  */
+
 public class MonsterEditorPanel extends JPanel {
     private JTable table;
     private DefaultTableModel model;
-    private final JButton addBtn, removeBtn, saveBtn, loadBtn;
+    private final JButton addBtn, removeBtn, saveBtn, loadBtn, scriptBtn;
+    // Store script file paths for each monster row (by index)
+    private java.util.Map<Integer, String> monsterScriptFiles = new java.util.HashMap<>();
 
     public MonsterEditorPanel() {
         setLayout(new BorderLayout(8, 8));
@@ -27,10 +30,12 @@ public class MonsterEditorPanel extends JPanel {
         removeBtn = new JButton("Remove");
         saveBtn = new JButton("Save");
         loadBtn = new JButton("Load");
+        scriptBtn = new JButton("Open Visual Scripting");
         controls.add(addBtn);
         controls.add(removeBtn);
         controls.add(saveBtn);
         controls.add(loadBtn);
+        controls.add(scriptBtn);
         add(controls, BorderLayout.SOUTH);
 
         addBtn.addActionListener(e -> model.addRow(new Object[columns.length]));
@@ -40,6 +45,77 @@ public class MonsterEditorPanel extends JPanel {
         });
         saveBtn.addActionListener(e -> saveToFile());
         loadBtn.addActionListener(e -> loadFromFile());
+
+        scriptBtn.addActionListener(e -> openMonsterScriptDialog());
+    }
+
+    // Open the visual scripting dialog for the selected monster, allowing association of a script file
+    private void openMonsterScriptDialog() {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Please select a monster row first.");
+            return;
+        }
+        String monsterName = (String) model.getValueAt(row, 1);
+        String scriptFile = monsterScriptFiles.getOrDefault(row, "monster_" + row + ".vsgraph");
+
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Visual Scripting for: " + monsterName, Dialog.ModalityType.APPLICATION_MODAL);
+        VisualScriptingPanel panel = new VisualScriptingPanel();
+        JPanel toolbar = panel.createToolbar();
+        JButton associateBtn = new JButton("Associate Script File");
+        toolbar.add(associateBtn);
+        associateBtn.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setSelectedFile(new File(scriptFile));
+            if (chooser.showSaveDialog(dialog) == JFileChooser.APPROVE_OPTION) {
+                monsterScriptFiles.put(row, chooser.getSelectedFile().getAbsolutePath());
+                JOptionPane.showMessageDialog(dialog, "Script file associated: " + chooser.getSelectedFile().getName());
+            }
+        });
+
+        // Load script if file exists
+        File f = new File(scriptFile);
+        if (f.exists()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+                java.util.List<String> lines = new java.util.ArrayList<>();
+                String line;
+                while ((line = br.readLine()) != null) lines.add(line);
+                // Use VisualScriptingPanel's load logic
+                panel.clearGraph();
+                for (String l : lines) {
+                    if (l.startsWith("NODE,")) {
+                        String[] parts = l.split(",");
+                        if (parts.length >= 5) {
+                            String label = parts[1];
+                            int x = Integer.parseInt(parts[2]);
+                            int y = Integer.parseInt(parts[3]);
+                            VisualScriptingPanel.NodeType type = VisualScriptingPanel.NodeType.valueOf(parts[4]);
+                            panel.addGraphNode(label, x, y, type);
+                        }
+                    }
+                }
+                for (String l : lines) {
+                    if (l.startsWith("CONN,")) {
+                        String[] parts = l.split(",");
+                        if (parts.length >= 3) {
+                            int fromIdx = Integer.parseInt(parts[1]);
+                            int toIdx = Integer.parseInt(parts[2]);
+                            panel.addGraphConnection(fromIdx, toIdx);
+                        }
+                    }
+                }
+                panel.repaint();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Error loading script: " + ex.getMessage());
+            }
+        }
+
+        dialog.getContentPane().setLayout(new BorderLayout());
+        dialog.getContentPane().add(toolbar, BorderLayout.NORTH);
+        dialog.getContentPane().add(panel, BorderLayout.CENTER);
+        dialog.setSize(900, 650);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void saveToFile() {

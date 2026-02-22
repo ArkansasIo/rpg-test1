@@ -6,6 +6,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -299,6 +300,13 @@ public class TileMap {
 
     public void setTileSet(Map<Integer, Tile> tileSet) {
         this.tileSet = tileSet;
+    }
+
+    public Map<Integer, Tile> getTileSet() {
+        if (tileSet == null) {
+            return Collections.emptyMap();
+        }
+        return Collections.unmodifiableMap(tileSet);
     }
 
     private static final boolean DEBUG_MODE = false;

@@ -1,22 +1,17 @@
 package dq1.editor;
 
 import dq1.core.GameAPI;
-import dq1.core.Resource;
-import dq1.core.Tile;
-import dq1.core.TileMap;
 import dq1.core.WoWZoneSystem;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -42,10 +37,15 @@ public class GameEditorFrame extends JFrame {
     private final JTextArea ideArea = createTextArea();
     private final JTextArea systemsArea = createTextArea();
     private final JTextArea mapDesignInfoArea = createTextArea();
-    private final MapCanvasPanel mapCanvasPanel = new MapCanvasPanel();
+    private final PixelTilesetEditorPanel pixelEditorPanel = new PixelTilesetEditorPanel();
+    private final MapEditorCanvasPanel mapCanvasPanel = new MapEditorCanvasPanel();
     private JComboBox<String> mapSelector;
+    private JComboBox<MapEditorCanvasPanel.Tool> toolSelector;
+    private JComboBox<MapEditorCanvasPanel.Layer> layerSelector;
+    private JComboBox<Integer> tilePaletteSelector;
     private JSpinner brushTileSpinner;
     private JSpinner zoomSpinner;
+    private JCheckBox gridToggle;
 
     // Editor panels for entities
     private final MonsterEditorPanel monsterEditorPanel = new MonsterEditorPanel();
@@ -101,6 +101,7 @@ public class GameEditorFrame extends JFrame {
         tabs.addTab("Framework", buildFrameworkPanel());
         tabs.addTab("Systems", buildSystemsPanel());
         tabs.addTab("Map Design", buildMapDesignPanel());
+        tabs.addTab("Pixels", pixelEditorPanel);
         tabs.addTab("Zones", buildZonesPanel());
         tabs.addTab("Data", buildDataPanel());
         // Add entity editors as tabs
@@ -242,34 +243,76 @@ public class GameEditorFrame extends JFrame {
         mapSelector = new JComboBox<>();
         top.add(mapSelector);
 
+        top.add(new JLabel("Tool:"));
+        toolSelector = new JComboBox<>(MapEditorCanvasPanel.Tool.values());
+        toolSelector.addActionListener(e ->
+                mapCanvasPanel.setTool((MapEditorCanvasPanel.Tool) toolSelector.getSelectedItem()));
+        top.add(toolSelector);
+
+        top.add(new JLabel("Layer:"));
+        layerSelector = new JComboBox<>(MapEditorCanvasPanel.Layer.values());
+        layerSelector.addActionListener(e ->
+                mapCanvasPanel.setLayer((MapEditorCanvasPanel.Layer) layerSelector.getSelectedItem()));
+        top.add(layerSelector);
+
         top.add(new JLabel("Brush Tile ID:"));
         brushTileSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 9999, 1));
+        brushTileSpinner.addChangeListener(e ->
+                mapCanvasPanel.setBrushTileId((Integer) brushTileSpinner.getValue()));
         top.add(brushTileSpinner);
+
+        top.add(new JLabel("Palette:"));
+        tilePaletteSelector = new JComboBox<>();
+        tilePaletteSelector.addActionListener(e -> {
+            Integer id = (Integer) tilePaletteSelector.getSelectedItem();
+            if (id != null) {
+                brushTileSpinner.setValue(id);
+            }
+        });
+        top.add(tilePaletteSelector);
 
         top.add(new JLabel("Zoom:"));
         zoomSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 4, 1));
+        zoomSpinner.addChangeListener(e -> mapCanvasPanel.setZoom((Integer) zoomSpinner.getValue()));
         top.add(zoomSpinner);
 
+        gridToggle = new JCheckBox("Grid", true);
+        gridToggle.addActionListener(e -> mapCanvasPanel.setShowGrid(gridToggle.isSelected()));
+        top.add(gridToggle);
+
         JButton apply = new JButton("Apply");
-        apply.addActionListener(e -> {
-            mapCanvasPanel.setBrushTileId((Integer) brushTileSpinner.getValue());
-            mapCanvasPanel.setZoom((Integer) zoomSpinner.getValue());
-            String mapId = (String) mapSelector.getSelectedItem();
-            if (mapId != null) {
-                mapCanvasPanel.loadMap(mapId);
-            }
-            refreshMapDesignInfo();
-        });
+        apply.addActionListener(e -> applyMapSelection());
         top.add(apply);
 
-        JButton export = new JButton("Export CSV");
+        JButton undo = new JButton("Undo");
+        undo.addActionListener(e -> {
+            mapCanvasPanel.undo();
+            refreshMapDesignInfo();
+        });
+        top.add(undo);
+
+        JButton redo = new JButton("Redo");
+        redo.addActionListener(e -> {
+            mapCanvasPanel.redo();
+            refreshMapDesignInfo();
+        });
+        top.add(redo);
+
+        JButton clearLayer = new JButton("Clear Layer");
+        clearLayer.addActionListener(e -> {
+            mapCanvasPanel.clearActiveLayer();
+            refreshMapDesignInfo();
+        });
+        top.add(clearLayer);
+
+        JButton export = new JButton("Export Session CSV");
         export.addActionListener(e -> {
             String mapId = (String) mapSelector.getSelectedItem();
             if (mapId == null || mapId.isBlank()) {
                 return;
             }
-            String msg = GameEditorRuntimeAPI.exportMapToCsv(
-                    mapId, "docs/editor_exports/" + mapId + "_designer_export.csv");
+            String msg = mapCanvasPanel.exportSessionCsv(
+                    "docs/editor_exports/" + mapId + "_designer_layers.csv");
             mapDesignInfoArea.setText(msg + System.lineSeparator() + mapDesignInfoArea.getText());
         });
         top.add(export);
@@ -279,13 +322,25 @@ public class GameEditorFrame extends JFrame {
         panel.add(new JScrollPane(mapDesignInfoArea), BorderLayout.SOUTH);
 
         mapSelector.addActionListener(e -> {
-            String mapId = (String) mapSelector.getSelectedItem();
-            if (mapId != null) {
-                mapCanvasPanel.loadMap(mapId);
-                refreshMapDesignInfo();
-            }
+            applyMapSelection();
+            refreshMapDesignInfo();
         });
+        mapCanvasPanel.setTilePickListener(id -> brushTileSpinner.setValue(id));
         return panel;
+    }
+
+    private void applyMapSelection() {
+        mapCanvasPanel.setBrushTileId((Integer) brushTileSpinner.getValue());
+        mapCanvasPanel.setZoom((Integer) zoomSpinner.getValue());
+        mapCanvasPanel.setShowGrid(gridToggle.isSelected());
+        mapCanvasPanel.setTool((MapEditorCanvasPanel.Tool) toolSelector.getSelectedItem());
+        mapCanvasPanel.setLayer((MapEditorCanvasPanel.Layer) layerSelector.getSelectedItem());
+        String mapId = (String) mapSelector.getSelectedItem();
+        if (mapId != null) {
+            mapCanvasPanel.loadMap(mapId);
+            refreshTilePalette(mapId);
+        }
+        refreshMapDesignInfo();
     }
 
     private static JTextArea createTextArea() {
@@ -397,7 +452,8 @@ public class GameEditorFrame extends JFrame {
     }
 
     private void refreshMapDesignPanel() {
-        if (mapSelector == null || brushTileSpinner == null || zoomSpinner == null) {
+        if (mapSelector == null || brushTileSpinner == null || zoomSpinner == null
+                || toolSelector == null || layerSelector == null) {
             return;
         }
         List<String> mapIds = GameEditorRuntimeAPI.listMapIds();
@@ -417,8 +473,27 @@ public class GameEditorFrame extends JFrame {
         String mapId = (String) mapSelector.getSelectedItem();
         if (mapId != null) {
             mapCanvasPanel.loadMap(mapId);
+            refreshTilePalette(mapId);
         }
         refreshMapDesignInfo();
+    }
+
+    private void refreshTilePalette(String mapId) {
+        if (tilePaletteSelector == null) {
+            return;
+        }
+        tilePaletteSelector.removeAllItems();
+        List<Integer> ids = GameEditorRuntimeAPI.getMapTileIds(mapId);
+        for (Integer id : ids) {
+            tilePaletteSelector.addItem(id);
+        }
+        int currentBrush = (Integer) brushTileSpinner.getValue();
+        if (ids.contains(currentBrush)) {
+            tilePaletteSelector.setSelectedItem(currentBrush);
+        }
+        else if (!ids.isEmpty()) {
+            tilePaletteSelector.setSelectedIndex(0);
+        }
     }
 
     private void refreshMapDesignInfo() {
@@ -432,101 +507,15 @@ public class GameEditorFrame extends JFrame {
         }
         List<String> lines = new ArrayList<>();
         lines.add("Map design uses the same tile graphics as the game.");
-        lines.add("Use mouse left-click/drag to paint tiles.");
+        lines.add("Tools: Paint, Erase, Fill, Rect, Eyedropper.");
+        lines.add("Layers: Base, Decoration, Collision.");
         lines.add("Map: " + mapId);
+        lines.add("Tool: " + (toolSelector == null ? "Paint" : toolSelector.getSelectedItem()));
+        lines.add("Layer: " + (layerSelector == null ? "Base" : layerSelector.getSelectedItem()));
         lines.add("Brush Tile ID: " + (brushTileSpinner == null ? "1" : brushTileSpinner.getValue()));
+        lines.addAll(mapCanvasPanel.getEditorSummaryLines());
         lines.addAll(GameEditorRuntimeAPI.mapSummary(mapId));
         mapDesignInfoArea.setText(String.join(System.lineSeparator(), lines));
     }
-
-    private static final class MapCanvasPanel extends JPanel {
-        private TileMap map;
-        private int brushTileId = 1;
-        private int zoom = 2;
-
-        MapCanvasPanel() {
-            setBackground(new Color(24, 24, 26));
-            java.awt.event.MouseAdapter painter = new java.awt.event.MouseAdapter() {
-                @Override
-                public void mousePressed(java.awt.event.MouseEvent e) {
-                    paintAt(e.getX(), e.getY());
-                }
-
-                @Override
-                public void mouseDragged(java.awt.event.MouseEvent e) {
-                    paintAt(e.getX(), e.getY());
-                }
-            };
-            addMouseListener(painter);
-            addMouseMotionListener(painter);
-        }
-
-        void setBrushTileId(int value) {
-            brushTileId = Math.max(0, value);
-        }
-
-        void setZoom(int value) {
-            zoom = Math.max(1, Math.min(4, value));
-            refreshPreferredSize();
-            repaint();
-        }
-
-        void loadMap(String mapId) {
-            try {
-                map = Resource.getTileMap(mapId);
-            }
-            catch (Exception ignored) {
-                map = null;
-            }
-            refreshPreferredSize();
-            repaint();
-        }
-
-        private void paintAt(int px, int py) {
-            if (map == null) {
-                return;
-            }
-            int tileSize = 16 * zoom;
-            int col = px / tileSize;
-            int row = py / tileSize;
-            if (row < 0 || col < 0 || row >= map.getRows() || col >= map.getCols()) {
-                return;
-            }
-            map.setTile(row, col, brushTileId);
-            repaint();
-        }
-
-        private void refreshPreferredSize() {
-            if (map == null) {
-                setPreferredSize(new Dimension(640, 480));
-            }
-            else {
-                setPreferredSize(new Dimension(map.getCols() * 16 * zoom, map.getRows() * 16 * zoom));
-            }
-            revalidate();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g;
-            if (map == null) {
-                g2.setColor(new Color(220, 220, 220));
-                g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-                g2.drawString("Map not loaded.", 20, 36);
-                return;
-            }
-            int tileSize = 16 * zoom;
-            for (int row = 0; row < map.getRows(); row++) {
-                for (int col = 0; col < map.getCols(); col++) {
-                    Tile tile = map.getTile(row, col);
-                    if (tile != null && tile.getImage() != null) {
-                        g2.drawImage(tile.getImage(), col * tileSize, row * tileSize, tileSize, tileSize, null);
-                    }
-                    g2.setColor(new Color(0, 0, 0, 28));
-                    g2.drawRect(col * tileSize, row * tileSize, tileSize, tileSize);
-                }
-            }
-        }
-    }
 }
+
