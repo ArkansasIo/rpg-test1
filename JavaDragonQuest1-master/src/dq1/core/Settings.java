@@ -9,7 +9,7 @@ import java.awt.event.KeyEvent;
  */
 public class Settings {
 
-    public static final String GAME_TITLE = "ELDRION LEGENDS";
+    public static final String GAME_TITLE = "Eldrion Legends - 2D RPG Engine & Editor";
     public static final String GAME_VERSION = "0.9.0-alpha";
     public static final String GAME_ENGINE_NAME = "ELDRION ENGINE";
     public static final String GAME_ENGINE_LOGO = "EE";

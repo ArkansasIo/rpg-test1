@@ -16,7 +16,7 @@ public class Credits {
 "\n" +
 "\n" +
 "\n" +
-"Dragon Warrior Staff:\n" +
+"Original Staff:\n" +
 "\n" +
 "\n" +
 "\n" +
@@ -58,7 +58,7 @@ public class Credits {
 "\n" +           
 "\n" +           
 "\n" +           
-"Assisted by:             \n" + 
+"Assisted by:             \n" +
 "\n" +
 "   Rika Suzuki\n" +
 "   Tadashi Fukuzawa\n" +
@@ -106,27 +106,27 @@ public class Credits {
 "\n" +
 "\n" +
 "\n" +
-"Special Thanks to:       \n" + 
+"Special Thanks to:       \n" +
 "\n" +
 "   Howard Phillips\n" +
 "\n" +
 "\n" +
 "\n" +
-"Directed by:             \n" + 
+"Directed by:             \n" +
 "\n" +
 "   Koichi Nakamura\n" +
 "\n" +
 "\n" +
 "\n" +
-"Produced by:             \n" + 
+"Produced by:             \n" +
 "\n" +
 "   Yukinobu Chida\n" +
 "\n" +
 "\n" +
 "\n" +
-"Java PC version by:       \n" + 
+"Java PC version by:       \n" +
 "\n" +
-"   O.L.\n" +
+"   \n" +
 "\n" +
 "\n" +
 "\n" +
@@ -138,12 +138,6 @@ public class Credits {
 "\n" +
 "\n" +
 "\n" +
-"Armor Project    1986-1989\n" +
-"Bird Studio      1986-1989\n" +
-"Koichi Sugiyama  1986-1989\n" +
-"Chun Soft        1986-1989\n" +
-"Enix             1986-1989\n" +
-"O.L.             2021-2021\n" +
 "\n" +
 "\n";
     

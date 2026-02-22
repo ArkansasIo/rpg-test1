@@ -57,7 +57,7 @@ public class GameEditorFrame extends JFrame {
     private final StorySystemsEditorPanel storySystemsEditorPanel = new StorySystemsEditorPanel();
 
     public GameEditorFrame() {
-        super("Dragon Warrior Engine Editor");
+        super("Eldrion Legends - 2D RPG Engine & Editor");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setMinimumSize(new Dimension(1100, 760));
         setLayout(new BorderLayout());
@@ -524,4 +524,3 @@ public class GameEditorFrame extends JFrame {
         mapDesignInfoArea.setText(String.join(System.lineSeparator(), lines));
     }
 }
-
