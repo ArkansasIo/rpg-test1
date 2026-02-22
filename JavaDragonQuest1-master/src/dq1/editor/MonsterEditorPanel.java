@@ -68,84 +68,86 @@ public class MonsterEditorPanel extends JPanel {
         });
         undoBtn.addActionListener(e -> undoEdit());
         redoBtn.addActionListener(e -> redoEdit());
-            // Undo/redo support
-            private void pushUndo() {
-                Object[][] snapshot = new Object[model.getRowCount()][model.getColumnCount()];
-                for (int i = 0; i < model.getRowCount(); i++) {
-                    for (int j = 0; j < model.getColumnCount(); j++) {
-                        snapshot[i][j] = model.getValueAt(i, j);
-                    }
-                }
-                undoStack.push(flatten(snapshot));
-                redoStack.clear();
-            }
+    }
 
-            private void undoEdit() {
-                if (!undoStack.isEmpty()) {
-                    Object[] prev = undoStack.pop();
-                    redoStack.push(flatten(getCurrentTable()));
-                    restoreTable(prev);
-                }
+    // Undo/redo support
+    private void pushUndo() {
+        Object[][] snapshot = new Object[model.getRowCount()][model.getColumnCount()];
+        for (int i = 0; i < model.getRowCount(); i++) {
+            for (int j = 0; j < model.getColumnCount(); j++) {
+                snapshot[i][j] = model.getValueAt(i, j);
             }
+        }
+        undoStack.push(flatten(snapshot));
+        redoStack.clear();
+    }
 
-            private void redoEdit() {
-                if (!redoStack.isEmpty()) {
-                    Object[] next = redoStack.pop();
-                    undoStack.push(flatten(getCurrentTable()));
-                    restoreTable(next);
-                }
-            }
+    private void undoEdit() {
+        if (!undoStack.isEmpty()) {
+            Object[] prev = undoStack.pop();
+            redoStack.push(flatten(getCurrentTable()));
+            restoreTable(prev);
+        }
+    }
 
-            private Object[][] getCurrentTable() {
-                Object[][] snapshot = new Object[model.getRowCount()][model.getColumnCount()];
-                for (int i = 0; i < model.getRowCount(); i++) {
-                    for (int j = 0; j < model.getColumnCount(); j++) {
-                        snapshot[i][j] = model.getValueAt(i, j);
-                    }
-                }
-                return snapshot;
-            }
+    private void redoEdit() {
+        if (!redoStack.isEmpty()) {
+            Object[] next = redoStack.pop();
+            undoStack.push(flatten(getCurrentTable()));
+            restoreTable(next);
+        }
+    }
 
-            private Object[] flatten(Object[][] arr) {
-                java.util.List<Object> flat = new java.util.ArrayList<>();
-                for (Object[] row : arr) for (Object val : row) flat.add(val);
-                return flat.toArray();
+    private Object[][] getCurrentTable() {
+        Object[][] snapshot = new Object[model.getRowCount()][model.getColumnCount()];
+        for (int i = 0; i < model.getRowCount(); i++) {
+            for (int j = 0; j < model.getColumnCount(); j++) {
+                snapshot[i][j] = model.getValueAt(i, j);
             }
+        }
+        return snapshot;
+    }
 
-            private void restoreTable(Object[] flat) {
-                int cols = model.getColumnCount();
-                int rows = flat.length / cols;
-                model.setRowCount(0);
-                for (int i = 0; i < rows; i++) {
-                    Object[] row = new Object[cols];
-                    for (int j = 0; j < cols; j++) {
-                        row[j] = flat[i * cols + j];
-                    }
-                    model.addRow(row);
-                }
+    private Object[] flatten(Object[][] arr) {
+        java.util.List<Object> flat = new java.util.ArrayList<>();
+        for (Object[] row : arr) for (Object val : row) flat.add(val);
+        return flat.toArray();
+    }
+
+    private void restoreTable(Object[] flat) {
+        int cols = model.getColumnCount();
+        int rows = flat.length / cols;
+        model.setRowCount(0);
+        for (int i = 0; i < rows; i++) {
+            Object[] row = new Object[cols];
+            for (int j = 0; j < cols; j++) {
+                row[j] = flat[i * cols + j];
             }
-        // Batch edit dialog for multiple monsters
-        private void openBatchEditDialog() {
-            int[] selectedRows = table.getSelectedRows();
-            if (selectedRows.length == 0) {
-                JOptionPane.showMessageDialog(this, "Select one or more monster rows to batch edit.");
-                return;
-            }
-            JPanel panel = new JPanel(new GridLayout(0, 2));
-            JTextField hpField = new JTextField();
-            panel.add(new JLabel("Set HP to:"));
-            panel.add(hpField);
-            JTextField strField = new JTextField();
-            panel.add(new JLabel("Set STR to:"));
-            panel.add(strField);
-            int result = JOptionPane.showConfirmDialog(this, panel, "Batch Edit Monsters", JOptionPane.OK_CANCEL_OPTION);
-            if (result == JOptionPane.OK_OPTION) {
-                String hpText = hpField.getText();
-                String strText = strField.getText();
-                for (int row : selectedRows) {
-                    if (!hpText.isEmpty()) model.setValueAt(hpText, row, 4); // HP column
-                    if (!strText.isEmpty()) model.setValueAt(strText, row, 2); // STR column
-                }
+            model.addRow(row);
+        }
+    }
+
+    // Batch edit dialog for multiple monsters
+    private void openBatchEditDialog() {
+        int[] selectedRows = table.getSelectedRows();
+        if (selectedRows.length == 0) {
+            JOptionPane.showMessageDialog(this, "Select one or more monster rows to batch edit.");
+            return;
+        }
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        JTextField hpField = new JTextField();
+        panel.add(new JLabel("Set HP to:"));
+        panel.add(hpField);
+        JTextField strField = new JTextField();
+        panel.add(new JLabel("Set STR to:"));
+        panel.add(strField);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Batch Edit Monsters", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            String hpText = hpField.getText();
+            String strText = strField.getText();
+            for (int row : selectedRows) {
+                if (!hpText.isEmpty()) model.setValueAt(hpText, row, 4); // HP column
+                if (!strText.isEmpty()) model.setValueAt(strText, row, 2); // STR column
             }
         }
     }
