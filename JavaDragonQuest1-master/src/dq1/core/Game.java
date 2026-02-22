@@ -14,6 +14,7 @@ import dq1.core.rpg.RpgSystems;
 import dq1.core.wowui.WowPanelId;
 import dq1.core.wowui.WowPanelModel;
 import dq1.core.wowui.WowUiFramework;
+import dq1.editor.GameEditorRuntimeAPI;
 import dq1.core.Script.ScriptCommand;
 import static dq1.core.Settings.*;
 import dq1.core.TileMap.Area;
@@ -1669,13 +1670,14 @@ public class Game {
                 "Audio / Speed",
                 "Display",
                 "Engine Diagnostics",
+                "Editor IDE",
                 "Keyboard Keybinds",
                 "Mouse Controls",
                 "UI / Story",
                 "Reset Default Keybinds",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(7, 8, 27, 10, -1, settingsOptions);
+            int option = Dialog.showOptionsMenu(7, 8, 27, 11, -1, settingsOptions);
             switch (option) {
                 case 0:
                     showOptionsMenu();
@@ -1687,18 +1689,21 @@ public class Game {
                     showEngineDiagnosticsPanel();
                     break;
                 case 3:
-                    remapControlsMenu();
+                    showInGameEditorIdeMenu();
                     break;
                 case 4:
-                    showMouseControlsMenu();
+                    remapControlsMenu();
                     break;
                 case 5:
-                    showUiStoryMenu();
+                    showMouseControlsMenu();
                     break;
                 case 6:
-                    resetDefaultKeybinds();
+                    showUiStoryMenu();
                     break;
                 case 7:
+                    resetDefaultKeybinds();
+                    break;
+                case 8:
                 case -1:
                     exit = true;
                     break;
@@ -1716,6 +1721,112 @@ public class Game {
         lines.add("Framework Log:");
         lines.addAll(GameEngineService.buildFrameworkLogLines(5));
         showSimplePanel("ENGINE DIAGNOSTICS", lines);
+    }
+
+    private static void showInGameEditorIdeMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Compile Project",
+                "Build JAR",
+                "Run Project",
+                "Map Editor Quick Tools",
+                "System Editors List",
+                "Open Swing Editor Window",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(7, 8, 33, 9, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("EDITOR IDE: COMPILE", GameEditorRuntimeAPI.compileProject());
+                    break;
+                case 1:
+                    showSimplePanel("EDITOR IDE: BUILD", GameEditorRuntimeAPI.buildProject());
+                    break;
+                case 2:
+                    showSimplePanel("EDITOR IDE: RUN", GameEditorRuntimeAPI.runProject());
+                    break;
+                case 3:
+                    showInGameMapEditorTools();
+                    break;
+                case 4:
+                    showSimplePanel("SYSTEM EDITORS", GameEditorRuntimeAPI.listSystemEditors());
+                    break;
+                case 5:
+                    GameAPI.openEditor();
+                    showUiToast("Editor window opened.");
+                    break;
+                case 6:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showInGameMapEditorTools() {
+        boolean exit = false;
+        while (!exit) {
+            String currentMapId = getCurrentMapIdSafe();
+            int sampleTile = GameEditorRuntimeAPI.getCurrentMapTileId(Player.getMapRow(), Player.getMapCol());
+            String[] options = new String[] {
+                "Show Current Map Summary",
+                "Set Player Tile -> Tile #1",
+                "Set Player Tile -> Tile #2",
+                "Export Current Map CSV",
+                "List Loaded Map IDs",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(7, 8, 34, 8, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("MAP SUMMARY",
+                            GameEditorRuntimeAPI.mapSummary(currentMapId));
+                    break;
+                case 1:
+                    if (GameEditorRuntimeAPI.setCurrentMapTile(Player.getMapRow(), Player.getMapCol(), 1)) {
+                        showUiToast("Tile set to 1 at player position.");
+                        redraw();
+                    }
+                    else {
+                        showUiToast("Map edit failed.");
+                    }
+                    break;
+                case 2:
+                    if (GameEditorRuntimeAPI.setCurrentMapTile(Player.getMapRow(), Player.getMapCol(), 2)) {
+                        showUiToast("Tile set to 2 at player position.");
+                        redraw();
+                    }
+                    else {
+                        showUiToast("Map edit failed.");
+                    }
+                    break;
+                case 3:
+                    String output = "docs/editor_exports/" + currentMapId + "_export.csv";
+                    String msg = GameEditorRuntimeAPI.exportMapToCsv(currentMapId, output);
+                    showUiToast(msg);
+                    break;
+                case 4:
+                    List<String> mapIds = new ArrayList<>();
+                    mapIds.add("Current: " + currentMapId + " tile@" + Player.getMapRow()
+                            + "," + Player.getMapCol() + "=" + sampleTile);
+                    mapIds.addAll(GameEditorRuntimeAPI.listMapIds());
+                    showSimplePanel("MAP IDS", mapIds);
+                    break;
+                case 5:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static String getCurrentMapIdSafe() {
+        Object mapId = Script.getGlobalValue("$$current_map_id");
+        if (mapId == null || mapId.toString().isBlank()) {
+            return "world";
+        }
+        return mapId.toString();
     }
 
     private static void showMouseControlsMenu() {

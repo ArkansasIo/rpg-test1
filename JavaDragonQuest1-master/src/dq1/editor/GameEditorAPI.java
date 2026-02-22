@@ -52,4 +52,40 @@ public class GameEditorAPI {
     public void applyDisplayPreset(String preset) {
         GameAPI.applyDisplayPreset(preset);
     }
+
+    public List<String> compileProject() {
+        return GameEditorRuntimeAPI.compileProject();
+    }
+
+    public List<String> buildProject() {
+        return GameEditorRuntimeAPI.buildProject();
+    }
+
+    public List<String> runProject() {
+        return GameEditorRuntimeAPI.runProject();
+    }
+
+    public List<String> listMapIds() {
+        return GameEditorRuntimeAPI.listMapIds();
+    }
+
+    public List<String> mapSummary(String mapId) {
+        return GameEditorRuntimeAPI.mapSummary(mapId);
+    }
+
+    public boolean setCurrentMapTile(int row, int col, int tileId) {
+        return GameEditorRuntimeAPI.setCurrentMapTile(row, col, tileId);
+    }
+
+    public int getCurrentMapTileId(int row, int col) {
+        return GameEditorRuntimeAPI.getCurrentMapTileId(row, col);
+    }
+
+    public String exportMapToCsv(String mapId, String outputPath) {
+        return GameEditorRuntimeAPI.exportMapToCsv(mapId, outputPath);
+    }
+
+    public List<String> listSystemEditors() {
+        return GameEditorRuntimeAPI.listSystemEditors();
+    }
 }

@@ -1,8 +1,16 @@
 package dq1.core;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import mmorpg.game.FeatureRegistry;
 
 /**
  * Unified runtime/editor API facade for tooling and launch integration.
@@ -59,6 +67,152 @@ public final class GameAPI {
     // Unified content API (replaces separate editor API surface)
     public static List<WoWZoneSystem.WoWZone> getZones() {
         return WoWZoneSystem.zones;
+    }
+
+    public static List<String> getMapIds() {
+        List<String> ids = new ArrayList<>();
+        for (Map.Entry<String, TileMap> entry : Resource.getTILE_MAPS().entrySet()) {
+            ids.add(entry.getKey());
+        }
+        Collections.sort(ids);
+        return ids;
+    }
+
+    public static List<String> getMapSummary(String mapId) {
+        List<String> lines = new ArrayList<>();
+        try {
+            TileMap map = Resource.getTileMap(mapId);
+            if (map == null) {
+                lines.add("Map not found: " + mapId);
+                return lines;
+            }
+            lines.add("Map ID: " + map.getId());
+            lines.add("Name: " + map.getName());
+            lines.add("Size: " + map.getCols() + "x" + map.getRows());
+            lines.add("Music: " + map.getMusicId());
+            lines.add("Dark: " + map.isDark());
+            lines.add("Encounters: " + map.isEnemiesEncounterEnabled());
+        }
+        catch (Exception e) {
+            lines.add("Map error: " + e.getMessage());
+        }
+        return lines;
+    }
+
+    public static boolean setCurrentMapTile(int row, int col, int tileId) {
+        TileMap map = Game.getCurrentMap();
+        if (map == null) {
+            return false;
+        }
+        map.setTile(row, col, tileId);
+        return true;
+    }
+
+    public static int getCurrentMapTileId(int row, int col) {
+        TileMap map = Game.getCurrentMap();
+        if (map == null) {
+            return -1;
+        }
+        Tile tile = map.getTile(row, col);
+        return tile == null ? -1 : tile.getId();
+    }
+
+    public static String exportMapToCsv(String mapId, String outputRelativePath) {
+        try {
+            TileMap map = Resource.getTileMap(mapId);
+            if (map == null) {
+                return "Map not found.";
+            }
+            Path output = Path.of(outputRelativePath);
+            if (output.getParent() != null) {
+                Files.createDirectories(output.getParent());
+            }
+            List<String> lines = new ArrayList<>();
+            lines.add("map_id," + map.getId());
+            lines.add("map_name," + map.getName());
+            lines.add("cols," + map.getCols());
+            lines.add("rows," + map.getRows());
+            lines.add("tile_data");
+            for (int row = 0; row < map.getRows(); row++) {
+                StringBuilder sb = new StringBuilder();
+                for (int col = 0; col < map.getCols(); col++) {
+                    if (col > 0) {
+                        sb.append(',');
+                    }
+                    Tile tile = map.getTile(row, col);
+                    sb.append(tile == null ? -1 : tile.getId());
+                }
+                lines.add(sb.toString());
+            }
+            Files.write(output, lines, StandardCharsets.UTF_8);
+            return "Exported: " + output.toAbsolutePath();
+        }
+        catch (Exception e) {
+            return "Export error: " + e.getMessage();
+        }
+    }
+
+    public static List<String> listSystemEditorModules() {
+        return List.of(
+                "Map Editor",
+                "Zone/Biome Editor",
+                "Quest/Story Editor",
+                "Items/Spells Editor",
+                "Combat Framework Editor",
+                "Display/Engine Settings Editor");
+    }
+
+    public static List<String> getFeatureMatrixLines() {
+        List<String> lines = new ArrayList<>();
+        for (FeatureRegistry.FeatureEntry feature : FeatureRegistry.getAll()) {
+            lines.add(feature.getStatus().name() + " | "
+                    + feature.getName() + " | " + feature.getArea());
+        }
+        return lines;
+    }
+
+    public static List<String> runBuildTarget(String target) {
+        List<String> lines = new ArrayList<>();
+        try {
+            String antCmd = "apache-ant-1.10.14\\bin\\ant.bat";
+            File rootA = new File(".");
+            File rootB = new File("JavaDragonQuest1-master");
+            File workDir = new File(rootA, "build.xml").exists() ? rootA : rootB;
+            File ant = new File(workDir, antCmd);
+            if (!ant.exists()) {
+                ant = new File("JavaDragonQuest1-master\\" + antCmd);
+            }
+            if (!ant.exists()) {
+                lines.add("Ant not found.");
+                return lines;
+            }
+            String buildFile = new File(workDir, "build.xml").getAbsolutePath();
+            ProcessBuilder pb = new ProcessBuilder(
+                    ant.getAbsolutePath(), "-f", buildFile, target);
+            pb.directory(workDir);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                    p.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                int count = 0;
+                while ((line = br.readLine()) != null) {
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    if (count < 80) {
+                        lines.add(line);
+                    }
+                    count++;
+                }
+            }
+            int exit = p.waitFor();
+            lines.add("Exit code: " + exit);
+        }
+        catch (Exception e) {
+            lines.add("Build error: " + e.getMessage());
+        }
+        return lines;
     }
 
     public static void addZone(String name, String biome, String[] subZones, String biomeTitle) {
