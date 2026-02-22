@@ -1,6 +1,8 @@
 package mmorpg.map;
 
 import java.io.File;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Map Creator runner inspired by rollforfantasy map-creator features.
@@ -9,9 +11,18 @@ import java.io.File;
 public class MapCreatorRunner {
     public static void main(String[] args) throws Exception {
         int w = 512, h = 256, seed = 12345;
+        String outDir = "maps"; // default output directory
         if (args.length >= 1) w = Integer.parseInt(args[0]);
         if (args.length >= 2) h = Integer.parseInt(args[1]);
         if (args.length >= 3) seed = Integer.parseInt(args[2]);
+        if (args.length >= 4) outDir = args[3];
+
+        // ensure output directory exists
+        File dir = new File(outDir);
+        if (!dir.exists()) dir.mkdirs();
+
+        // timestamp for filenames
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
 
         ElevationGenerator eg = new ElevationGenerator(seed);
         double[][] elev = eg.generateElevation(w, h, 5);
@@ -45,10 +56,13 @@ public class MapCreatorRunner {
         kg.placeRoad(map, w/4, h/3, w*3/5, h*2/3);
 
         PngExporter ex = new PngExporter();
-        ex.exportField(elev, new File("elevation.png"));
-        ex.exportField(moist, new File("moisture.png"));
-        ex.exportTiles(map, new File("world.png"));
+        File elevOut = new File(dir, "elevation-" + ts + ".png");
+        File moistOut = new File(dir, "moisture-" + ts + ".png");
+        File worldOut = new File(dir, "world-" + ts + ".png");
+        ex.exportField(elev, elevOut);
+        ex.exportField(moist, moistOut);
+        ex.exportTiles(map, worldOut);
 
-        System.out.println("Exported elevation.png, moisture.png, world.png");
+        System.out.println("Exported " + elevOut.getPath() + ", " + moistOut.getPath() + ", " + worldOut.getPath());
     }
 }
