@@ -1,5 +1,7 @@
 package dq1.editor;
 
+import dq1.tools.AssetCsvTool;
+
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
@@ -35,12 +37,24 @@ public class AssetBrowserPanel extends JPanel {
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton refresh = new JButton("Refresh");
         JButton importBtn = new JButton("Import...");
+        JButton exportCsv = new JButton("Export CSV");
         top.add(refresh);
         top.add(importBtn);
+        top.add(exportCsv);
         add(top, BorderLayout.NORTH);
 
         refresh.addActionListener(e -> refresh());
         importBtn.addActionListener(e -> importFiles());
+        exportCsv.addActionListener(e -> {
+            try {
+                Path root = Path.of("assets/res");
+                Path out = Path.of("assets/res/assets_list.csv");
+                AssetCsvTool.exportAssetsCsv(root, out);
+                JOptionPane.showMessageDialog(this, "Exported assets CSV to: " + out.toAbsolutePath());
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage());
+            }
+        });
 
         // enable drag-out: copy absolute path when dragging
         list.setDragEnabled(true);
