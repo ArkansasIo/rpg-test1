@@ -66,7 +66,7 @@ public class Game {
     
     private static boolean running;
     private static TileMap currentMap;
-    private static State state = State.TITLE;
+    private static State state = State.OL_PRESENTS;
     private static TileMap newMap;
     private static boolean newMapUseFadeEffect;
     private static int playerNewRow;
@@ -234,6 +234,7 @@ public class Game {
     }
     
     private static void updateOLPresents() throws Exception {
+        showCustomSplashLogo();
         state = TITLE;
     }
 
@@ -246,7 +247,7 @@ public class Game {
         Graphics2D g2 = View.getOffscreenGraphics2D(2);
         Graphics2D g3 = View.getOffscreenGraphics2D(3);
         long start = System.currentTimeMillis();
-        long durationMs = 2800;
+        long durationMs = 3200;
 
         while (true) {
             long now = System.currentTimeMillis();
@@ -272,10 +273,10 @@ public class Game {
             g2.clearRect(0, 0, 256, 240);
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int logoW = (int) (172 + 10 * glow);
-            int logoH = (int) (68 + 4 * glow);
+            int logoW = (int) (182 + 10 * glow);
+            int logoH = (int) (70 + 4 * glow);
             int logoX = 128 - logoW / 2;
-            int logoY = 88 - logoH / 2;
+            int logoY = 80 - logoH / 2;
 
             g2.setColor(new Color(0, 0, 0, 150));
             g2.fillRoundRect(logoX + 3, logoY + 3, logoW, logoH, 18, 18);
@@ -286,10 +287,37 @@ public class Game {
 
             g2.setColor(new Color(240, 228, 198));
             g2.setFont(new Font("Serif", Font.BOLD, 24));
-            g2.drawString("ELDRION LEGENDS", 48, 94);
+            g2.drawString(Settings.GAME_TITLE, 38, 87);
             g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
             g2.setColor(new Color(213, 196, 155));
-            g2.drawString("A New Fantasy RPG Experience", 67, 112);
+            g2.drawString("Version " + Settings.GAME_VERSION, 93, 104);
+
+            int engineX = 56;
+            int engineY = 132;
+            int engineW = 144;
+            int engineH = 42;
+            g2.setColor(new Color(0, 0, 0, 130));
+            g2.fillRoundRect(engineX + 2, engineY + 2, engineW, engineH, 14, 14);
+            g2.setColor(new Color(110, 145, 176));
+            g2.drawRoundRect(engineX, engineY, engineW, engineH, 14, 14);
+            g2.setColor(new Color(180, 220, 245, 180));
+            g2.drawRoundRect(engineX + 1, engineY + 1, engineW - 2, engineH - 2, 12, 12);
+
+            int emblemX = engineX + 11;
+            int emblemY = engineY + 9;
+            int emblemR = 24;
+            g2.setColor(new Color(34, 56, 76));
+            g2.fillOval(emblemX, emblemY, emblemR, emblemR);
+            g2.setColor(new Color(188, 225, 250));
+            g2.drawOval(emblemX, emblemY, emblemR, emblemR);
+            g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+            g2.drawString(Settings.GAME_ENGINE_LOGO, emblemX + 5, emblemY + 16);
+
+            g2.setColor(new Color(194, 221, 239));
+            g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+            g2.drawString("Powered by", engineX + 43, engineY + 16);
+            g2.setColor(new Color(230, 239, 247));
+            g2.drawString(Settings.GAME_ENGINE_NAME, engineX + 43, engineY + 30);
             g2.setColor(new Color(160, 160, 170));
             g2.drawString("Press Confirm/Cancel to skip", 70, 206);
 
@@ -668,7 +696,164 @@ public class Game {
         if (Player.isVisible()) {
             Player.draw(g);
         }
+        drawWowPrototypeInGameLayout(g);
         View.refresh();
+    }
+
+    private static void drawWowPrototypeInGameLayout(Graphics2D g) {
+        if (state != MAP) {
+            return;
+        }
+
+        drawWowPlayerFrame(g);
+        drawWowQuestTracker(g);
+        drawWowZoneFrame(g);
+        drawWowActionBar(g);
+    }
+
+    private static void drawWowPlayerFrame(Graphics2D g) {
+        int x = 6;
+        int y = 6;
+        int w = 118;
+        int h = 38;
+        drawHudPanel(g, x, y, w, h, new Color(18, 28, 36, 185), new Color(115, 150, 172, 220));
+
+        PlayerRpgProfile profile = RpgSystems.getProfile();
+        String name = Player.getName();
+        String clazz = profile.getCharacterClass().name();
+        int hp = profile.getCurrentHp();
+        int hpMax = profile.getMaxHp();
+        int mp = profile.getCurrentMp();
+        int mpMax = profile.getMaxMp();
+
+        g.setFont(new Font("SansSerif", Font.BOLD, 10));
+        g.setColor(new Color(235, 235, 235));
+        g.drawString(name + "  Lv." + Player.getLevel(), x + 6, y + 12);
+        g.setColor(new Color(185, 205, 220));
+        g.drawString(clazz, x + 6, y + 22);
+
+        int barX = x + 56;
+        int hpY = y + 16;
+        int mpY = y + 28;
+        int barW = 54;
+        drawStatusBar(g, barX, hpY, barW, 6, hp, hpMax, new Color(188, 58, 58), new Color(88, 26, 26));
+        drawStatusBar(g, barX, mpY, barW, 6, mp, mpMax, new Color(48, 94, 180), new Color(26, 46, 88));
+    }
+
+    private static void drawWowQuestTracker(Graphics2D g) {
+        int x = 146;
+        int y = 6;
+        int w = 104;
+        int h = 62;
+        drawHudPanel(g, x, y, w, h, new Color(23, 26, 34, 185), new Color(141, 122, 82, 220));
+
+        g.setFont(new Font("SansSerif", Font.BOLD, 10));
+        g.setColor(new Color(238, 226, 184));
+        g.drawString("QUEST TRACKER", x + 7, y + 12);
+
+        g.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        g.setColor(new Color(224, 224, 224));
+        int rowY = y + 24;
+        int shown = 0;
+        for (Quest.QuestData quest : Quest.getQuestLog()) {
+            if (quest.status != Quest.QuestStatus.ACTIVE && quest.status != Quest.QuestStatus.COMPLETED) {
+                continue;
+            }
+            String status = quest.status == Quest.QuestStatus.ACTIVE ? "[A]" : "[C]";
+            String title = quest.name;
+            if (title.length() > 16) {
+                title = title.substring(0, 16);
+            }
+            g.drawString(status + " " + title, x + 7, rowY);
+            rowY += 10;
+            shown++;
+            if (shown >= 3) {
+                break;
+            }
+        }
+        if (shown == 0) {
+            g.drawString("No active quests", x + 7, rowY);
+        }
+    }
+
+    private static void drawWowZoneFrame(Graphics2D g) {
+        int x = 174;
+        int y = 72;
+        int w = 76;
+        int h = 30;
+        drawHudPanel(g, x, y, w, h, new Color(18, 22, 30, 170), new Color(100, 120, 150, 210));
+
+        Object mapNameObj = Script.getGlobalValue("$$current_map_name");
+        String mapName = mapNameObj == null ? "Unknown Zone" : mapNameObj.toString();
+        if (mapName.length() > 14) {
+            mapName = mapName.substring(0, 14);
+        }
+        g.setFont(new Font("SansSerif", Font.BOLD, 9));
+        g.setColor(new Color(220, 225, 232));
+        g.drawString(mapName, x + 5, y + 11);
+
+        g.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        g.setColor(new Color(182, 199, 216));
+        g.drawString("X:" + Player.getMapCol() + " Y:" + Player.getMapRow(), x + 5, y + 22);
+    }
+
+    private static void drawWowActionBar(Graphics2D g) {
+        int totalSlots = 10;
+        int slotW = 22;
+        int slotH = 18;
+        int spacing = 2;
+        int totalW = totalSlots * slotW + (totalSlots - 1) * spacing;
+        int startX = (256 - totalW) / 2;
+        int y = 216;
+
+        List<String> hotbarLines = RpgSystems.getRuntime().buildHotbarLines();
+        for (int slot = 1; slot <= totalSlots; slot++) {
+            int x = startX + (slot - 1) * (slotW + spacing);
+            drawHudPanel(g, x, y, slotW, slotH, new Color(22, 26, 34, 190), new Color(120, 148, 178, 220));
+
+            String keyLabel = slot == 10 ? "0" : Integer.toString(slot);
+            g.setFont(new Font("SansSerif", Font.BOLD, 8));
+            g.setColor(new Color(240, 223, 176));
+            g.drawString(keyLabel, x + 3, y + 9);
+
+            String itemLabel = "";
+            if (slot < hotbarLines.size()) {
+                String line = hotbarLines.get(slot);
+                int colon = line.indexOf(':');
+                if (colon >= 0 && colon + 1 < line.length()) {
+                    itemLabel = line.substring(colon + 1).trim();
+                }
+            }
+            if (itemLabel.equals("(empty)")) {
+                itemLabel = "--";
+            }
+            if (itemLabel.length() > 4) {
+                itemLabel = itemLabel.substring(0, 4);
+            }
+            g.setFont(new Font("SansSerif", Font.PLAIN, 8));
+            g.setColor(new Color(205, 214, 224));
+            g.drawString(itemLabel, x + 8, y + 15);
+        }
+    }
+
+    private static void drawHudPanel(Graphics2D g, int x, int y, int w, int h, Color fill, Color border) {
+        g.setColor(fill);
+        g.fillRoundRect(x, y, w, h, 8, 8);
+        g.setColor(border);
+        g.drawRoundRect(x, y, w, h, 8, 8);
+    }
+
+    private static void drawStatusBar(Graphics2D g, int x, int y, int w, int h, int value, int max
+            , Color fill, Color bg) {
+        g.setColor(bg);
+        g.fillRoundRect(x, y, w, h, 4, 4);
+        int safeMax = Math.max(1, max);
+        int clamped = Math.max(0, Math.min(value, safeMax));
+        int fw = (int) ((w - 2) * (clamped / (double) safeMax));
+        g.setColor(fill);
+        g.fillRoundRect(x + 1, y + 1, fw, h - 2, 4, 4);
+        g.setColor(new Color(15, 15, 18, 180));
+        g.drawRoundRect(x, y, w, h, 4, 4);
     }
     
     private static void updateChangeMap() throws Exception {
