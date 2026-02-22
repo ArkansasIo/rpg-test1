@@ -1,0 +1,201 @@
+category,id,name,tone,notes
+hero_name,1,Aldric,classic,knight lead
+hero_name,2,Rowan,classic,wandering swordsman
+hero_name,3,Caedmon,classic,holy guardian
+hero_name,4,Leoric,classic,royal bloodline
+hero_name,5,Thane,grim,battle veteran
+hero_name,6,Garrick,classic,mercenary captain
+hero_name,7,Edrin,mystic,mage-hero
+hero_name,8,Bram,classic,village champion
+hero_name,9,Corvin,grim,raven motif
+hero_name,10,Torvald,grim,northern warrior
+hero_name,11,Roderic,classic,paladin archetype
+hero_name,12,Fenric,grim,wolf hunter
+hero_name,13,Alaric,classic,commander type
+hero_name,14,Merek,classic,rogue-hero
+hero_name,15,Orrin,mystic,rune seeker
+hero_name,16,Cassian,noble,duelist
+hero_name,17,Hadrian,noble,imperial knight
+hero_name,18,Vael,arcane,spellblade
+hero_name,19,Darian,noble,prince hero
+hero_name,20,Lucan,classic,monster slayer
+heroine_name,21,Elowen,mystic,druidic lead
+heroine_name,22,Seraphine,noble,holy mage
+heroine_name,23,Ilyana,arcane,void scholar
+heroine_name,24,Mirelle,classic,healer archetype
+heroine_name,25,Lyra,mystic,bardic theme
+heroine_name,26,Aveline,noble,knight captain
+heroine_name,27,Rhiannon,mystic,forest guardian
+heroine_name,28,Selene,arcane,moon mage
+heroine_name,29,Isolde,classic,tragedy motif
+heroine_name,30,Brynn,grim,shield maiden
+heroine_name,31,Catrin,classic,tactical leader
+heroine_name,32,Eira,mystic,winter priestess
+heroine_name,33,Kaela,classic,swift ranger
+heroine_name,34,Nerys,mystic,sea witch
+heroine_name,35,Valora,noble,banner bearer
+heroine_name,36,Tamsin,classic,alchemist
+heroine_name,37,Maeve,grim,clan queen
+heroine_name,38,Ysolde,noble,court mage
+heroine_name,39,Sable,grim,assassin
+heroine_name,40,Thalia,mystic,light weaver
+village_name,41,Oakhollow,classic,farming village
+village_name,42,Brambleford,classic,river village
+village_name,43,Ashbourne,grim,burned outskirts
+village_name,44,Ravenmoor,grim,swamp border
+village_name,45,Stonehearth,classic,mountain village
+village_name,46,Willowmere,mystic,lake settlement
+village_name,47,Dunfield,classic,plains
+village_name,48,Frostbarrow,grim,northern village
+village_name,49,Eldenbrook,classic,starter village
+village_name,50,Thornstead,grim,fortified village
+city_name,51,Highcrest,noble,capital city
+city_name,52,Kingsfall,grim,war-scarred capital
+city_name,53,Valemarch,noble,trade city
+city_name,54,Stormwatch,grim,coastal fortress city
+city_name,55,Silverkeep,noble,royal seat
+city_name,56,Gildenport,noble,merchant metropolis
+city_name,57,Ironhaven,classic,industrial city
+city_name,58,Moonspire,arcane,mage city
+city_name,59,Blackgate,grim,frontier city
+city_name,60,Dawnhold,classic,holy city
+kingdom_name,61,Eldoria,noble,human kingdom
+kingdom_name,62,Drakenhall,grim,dragon-ruled old realm
+kingdom_name,63,Varenthia,noble,imperial nation
+kingdom_name,64,Northwyrm,grim,northern confederacy
+kingdom_name,65,Solmire,mystic,sunlit realm
+kingdom_name,66,Ravenreach,grim,shadow monarchy
+kingdom_name,67,Aetheris,arcane,mage kingdom
+kingdom_name,68,Thornwall,classic,defensive kingdom
+kingdom_name,69,Caelthorn,mystic,forest crown
+kingdom_name,70,Ironvale,classic,mountain realm
+guild_name,71,Order of the Dawn,holy,paladin guild
+guild_name,72,Ashen Blades,grim,bounty guild
+guild_name,73,Silver Veil,mystic,arcane guild
+guild_name,74,Wardens of Stone,classic,tank guild
+guild_name,75,Night Ravens,grim,rogue guild
+guild_name,76,Emerald Circle,mystic,druid guild
+guild_name,77,Crimson Banner,noble,merc guild
+guild_name,78,Lantern Covenant,holy,cleric order
+guild_name,79,Black Anvil,classic,smith guild
+guild_name,80,Ivory Sentinels,noble,elite guard guild
+faction_name,81,The Iron Throne,noble,royal bloc
+faction_name,82,The Hollow Court,grim,undead court
+faction_name,83,The Star Synod,arcane,mage senate
+faction_name,84,The Wild Pact,mystic,beast alliance
+faction_name,85,The Broken Spear,grim,rebel faction
+faction_name,86,The Golden Hand,noble,merchant faction
+faction_name,87,The Pale Choir,holy,fanatical sect
+faction_name,88,The Ember Circle,mystic,fire cult
+faction_name,89,The Deep Cartel,grim,underworld syndicate
+faction_name,90,The Free Marches,classic,frontier alliance
+tavern_name,91,The Drunken Gryphon,classic,tavern
+tavern_name,92,The Rusty Tankard,classic,tavern
+tavern_name,93,The Last Lantern,grim,roadside inn
+tavern_name,94,The Moonlit Stag,mystic,tavern
+tavern_name,95,The Crown and Pike,noble,city inn
+tavern_name,96,The Black Boar,grim,mercenary den
+tavern_name,97,The Singing Kettle,classic,village inn
+tavern_name,98,The Sapphire Mug,noble,merchant inn
+tavern_name,99,The Hollow Cask,grim,smuggler bar
+tavern_name,100,The Sunward Hearth,holy,pilgrim inn
+dungeon_name,101,Crypt of Ashes,grim,undead dungeon
+dungeon_name,102,Vault of Thorns,classic,trap dungeon
+dungeon_name,103,Catacombs of Vel,grim,boss dungeon
+dungeon_name,104,Sunken Reliquary,mystic,water dungeon
+dungeon_name,105,Fangroot Depths,grim,beast den
+dungeon_name,106,Halls of Ember,arcane,fire dungeon
+dungeon_name,107,Ruins of Aster,classic,ancient ruin
+dungeon_name,108,Sepulcher of Kings,noble,royal tomb
+dungeon_name,109,Whispering Mines,grim,haunted mine
+dungeon_name,110,Citadel Below,grim,endgame dungeon
+forest_name,111,Evershade Wood,mystic,enchanted forest
+forest_name,112,Gloamwood,grim,shadow forest
+forest_name,113,Silverpine,mystic,moonlit forest
+forest_name,114,Briarfen,grim,swamp forest
+forest_name,115,Sunleaf Grove,classic,starter forest
+mountain_name,116,Skyrend Peaks,classic,mountain chain
+mountain_name,117,Frostfang Range,grim,snow mountains
+mountain_name,118,Cindercliff,grim,volcanic ridge
+mountain_name,119,Aegis Spine,classic,fortress mountains
+mountain_name,120,Stormcrown,noble,sacred peak
+enemy_name,121,Bonewalker,grim,undead
+enemy_name,122,Ghoulclaw,grim,undead
+enemy_name,123,Dread Warg,grim,beast
+enemy_name,124,Ash Imp,arcane,minor demon
+enemy_name,125,Bog Fiend,grim,swamp horror
+enemy_name,126,Rift Cultist,arcane,humanoid
+enemy_name,127,Iron Marauder,classic,bandit heavy
+enemy_name,128,Grave Knight,grim,elite undead
+enemy_name,129,Frost Revenant,grim,ice undead
+enemy_name,130,Blight Treant,mystic,corrupted spirit
+enemy_name,131,Void Seer,arcane,caster enemy
+enemy_name,132,Silt Serpent,classic,water beast
+enemy_name,133,Stone Goliath,classic,construct
+enemy_name,134,Scarlet Harpy,grim,aerial enemy
+enemy_name,135,Runebound Sentinel,arcane,guardian
+boss_name,136,Maldrake the Ashen,grim,dragon boss
+boss_name,137,Queen Vespera,grim,vampire queen
+boss_name,138,Archon Kharos,arcane,void tyrant
+boss_name,139,The Hollow King,grim,undead sovereign
+boss_name,140,Aurelion Dawnbane,noble,fallen paladin
+boss_name,141,Gorath Stonebreaker,classic,giant warlord
+boss_name,142,Ithryl the Tidecaller,mystic,sea boss
+boss_name,143,Nyxara Nightweaver,arcane,shadow witch
+boss_name,144,Brimscale,grim,wyrm boss
+boss_name,145,Ser Caldor the Betrayed,noble,cursed knight
+weapon_name,146,Dawnpiercer,holy,sword
+weapon_name,147,Gravefang,grim,sword
+weapon_name,148,Stormreaver,classic,axe
+weapon_name,149,Moonthread,mystic,staff
+weapon_name,150,Ironwhisper,grim,dagger
+weapon_name,151,Sunlance,holy,spear
+weapon_name,152,Nightglass,arcane,wand
+weapon_name,153,Bloodmourn,grim,greatsword
+weapon_name,154,Kingshard,noble,blade
+weapon_name,155,Thornbite,mystic,bow
+armor_name,156,Aegis of Dawn,holy,chest armor
+armor_name,157,Wardenplate,classic,heavy armor
+armor_name,158,Shadowweave Cloak,grim,light armor
+armor_name,159,Runesilk Mantle,arcane,robe
+armor_name,160,Frostguard Mail,classic,chainmail
+artifact_name,161,Crown of Embers,legendary,artifact
+artifact_name,162,Heart of the Vale,legendary,artifact
+artifact_name,163,Sigil of Nine Stars,legendary,artifact
+artifact_name,164,Black Sun Relic,legendary,artifact
+artifact_name,165,Tear of the First Dragon,legendary,artifact
+quest_name,166,The Broken Oath,main,chapter quest
+quest_name,167,Ashes in the Snow,main,chapter quest
+quest_name,168,Whispers Under Stone,main,dungeon quest
+quest_name,169,A Crown Unclaimed,main,succession quest
+quest_name,170,The Lantern Debt,side,town side quest
+quest_name,171,Wolves at Briar Gate,side,hunt quest
+quest_name,172,The Missing Acolyte,side,rescue quest
+quest_name,173,Shards of the Relic,side,collection quest
+quest_name,174,Song of the Deep Bell,side,mystery quest
+quest_name,175,Trial of the Silver Veil,main,guild quest
+npc_title,176,High Warden,title,guard captain
+npc_title,177,Court Arcanist,title,royal mage
+npc_title,178,Master of Coin,title,treasurer
+npc_title,179,Keeper of Graves,title,crypt custodian
+npc_title,180,Speaker of Embers,title,cult envoy
+npc_title,181,Thorn Marshal,title,frontier commander
+npc_title,182,Archivist Prime,title,lore keeper
+npc_title,183,Harbormaster,title,port authority
+npc_title,184,Shieldmother,title,clan elder
+npc_title,185,Rift Justicar,title,arcane enforcer
+pet_name,186,Pipfang,light,wolf pup
+pet_name,187,Mossbeard,light,sprite
+pet_name,188,Cinderpaw,light,fire fox
+pet_name,189,Rook,light,raven
+pet_name,190,Nimbus,light,sky drake
+ship_name,191,The Iron Gull,classic,naval vessel
+ship_name,192,Moonwake,mystic,arcane ship
+ship_name,193,Blackwake,grim,pirate vessel
+ship_name,194,The Sunward Crown,noble,royal ship
+ship_name,195,Storm Pilgrim,classic,exploration ship
+religion_name,196,The Radiant Path,holy,major faith
+religion_name,197,The Umbral Rite,grim,shadow creed
+religion_name,198,Circle of the Verdant,mystic,nature faith
+religion_name,199,The Ember Testament,arcane,fire doctrine
+religion_name,200,The Silent Choir,grim,death cult

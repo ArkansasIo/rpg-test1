@@ -1,0 +1,46 @@
+ID,Name,Level,Class,Race,STR,DEX,CON,INT,WIS,VIT,SPI,LCK,WIL,CHA,HP,MP,Stamina,GearScore,PvPRank,PvERank,StatusEffects,Buffs,Debuffs,Resources,Resistances,Inventory,EquippedItems,Achievements,Titles,MountID,PetID
+1,Hero,10,Warrior,Human,15,12,14,8,7,13,6,5,9,10,120,40,30,200,2,3,"Stun;Burn","Power Surge","Poison","HP;MP","Fire:10;Ice:5","Sword;Shield","Sword","FirstBlood","Champion",1,2
+2,Mage,12,Mage,Elf,7,14,10,18,15,9,12,8,10,11,80,120,25,180,3,4,"Freeze","Arcane Amplify","Hex","MP;Aether","Arcane:12;Dark:8","Staff;Robe","Staff","SpellMaster","Sage",3,4
+
+-- Items
+ID,Name,Type,Rarity,Stats,SetID,OwnerID,Equipped
+1,Sword,Weapon,Rare,"STR:5;PAT:2",1,1,TRUE
+2,Staff,Weapon,Legendary,"INT:8;MP:10",2,2,TRUE
+
+-- Abilities
+ID,Name,Class,Type,Cooldown,Cost,Effect,Scaling,UnlockLevel
+1,Slash,Warrior,Attack,5,10,"PhysicalDamage","STR*2",1
+2,Fireball,Mage,Spell,8,15,"FireDamage","INT*3",2
+
+-- Quests
+ID,Name,Description,Type,Status,Reward,RequiredLevel,RequiredItems,RequiredKills,Progress
+1,Defeat Slime,"Kill 10 slimes",Kill,Active,"XP:100;Gold:10",1,"Sword",10,5
+2,Find Staff,"Retrieve the lost staff",Fetch,Completed,"XP:200;Staff",2,"Staff",0,1
+
+-- Parties
+ID,LeaderID,MemberIDs,PartySize,Raid
+1,1,"1;2",2,FALSE
+
+-- Guilds
+ID,Name,LeaderID,MemberIDs,Rank,Achievements
+1,Knights,1,"1;2",5,"FirstRaid"
+
+-- PvP Matches
+ID,Team1IDs,Team2IDs,WinnerTeam,MatchType,Duration,Score
+1,"1","2",1,Arena,15,"10-8"
+
+-- Boss Encounters
+ID,BossID,PartyID,Phase,StartTime,EndTime,Outcome,Loot
+1,2,1,1,2026-02-22 10:00,2026-02-22 10:20,Victory,"DragonScale"
+
+-- Achievements
+ID,Name,Description,UnlockCondition,Reward
+1,FirstBlood,"First kill","Kill any monster","Title:Champion"
+
+-- Mounts
+ID,Name,Type,Speed,OwnerID
+1,Horse,Ground,60,1
+
+-- Pets
+ID,Name,Type,Abilities,OwnerID
+2,Fairy,Magic,"Heal;Buff",2

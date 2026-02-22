@@ -2,116 +2,129 @@
 
 ## 1. Game Overview
 
-### 1.1 Title
-Java Dragon Quest 1
+### Title
+Eldrion Legends
 
-### 1.2 Genre
-Single-player, turn-based RPG (retro tile-based exploration and combat).
+### Genre
+2D RPG / JRPG-inspired adventure with expandable MMORPG-style systems.
 
-### 1.3 Design Pillars
-- Classic JRPG pacing and structure.
-- Deterministic, data-driven content using map/event/script files.
-- Lightweight Java implementation with no external gameplay framework.
+### Platform
+Desktop (Windows-focused Java runtime).
+
+### Pillars
+- Exploration-driven overworld and dungeon progression
+- Tactical turn-based combat with data-driven balancing
+- Strong editor-driven content workflow
+- Extensible systems for quests, zones, and progression
 
 ## 2. Player Experience
 
-### 2.1 Core Fantasy
-The player explores towns, dungeons, and overworld zones, grows stronger through combat and equipment, and advances the main quest through interactions and scripted events.
+### Core Loop
+1. Explore map and discover events
+2. Trigger combat and earn rewards
+3. Upgrade character (gear/spells/stats)
+4. Progress quests and story chapters
+5. Unlock harder zones and bosses
 
-### 2.2 Session Loop
-1. Travel on map and discover points of interest.
-2. Trigger NPC/dialog/shop/quest events.
-3. Enter random or scripted battles.
-4. Gain resources (gold, items, progression state).
-5. Return to towns/save points for preparation.
-6. Push into harder zones.
+### Session Goals
+- Short: clear local map goals and gather resources
+- Mid: complete chapter quests and improve combat power
+- Long: finish acts, defeat major bosses, and complete side content
 
-## 3. Gameplay Systems
+## 3. World and Content
 
-### 3.1 World And Navigation
-- Tile-based maps loaded from `assets/res/map/*.map`.
-- Event layers loaded from `assets/res/event/*.evt`.
-- Map transitions support scripted teleports, fade effects, music changes, and darkness rules.
-- Area boundaries can auto-transition players to target maps.
+### World Structure
+- Multi-map world connected by teleports/events
+- Town, wilderness, cave, and castle style maps
+- Zone metadata for difficulty and encounter flavor
 
-### 3.2 Interaction Model
-- Confirm key (`X` by default) drives NPC interaction and menu actions.
-- Cancel key (`Z` by default) exits menus and context actions.
-- Dialog/UI rendering uses boxed text and option menus to preserve retro style.
+### Story Structure
+- 12 acts
+- 50 chapters per act (authorable framework)
+- Main quests and side quests per chapter
 
-### 3.3 Combat
-- Turn-based combat with enemy data sourced from `assets/res/inf/enemies.inf`.
-- Combat background and effects are tied to map tile properties and battle context.
-- Player growth is level-driven via `assets/res/inf/player_levels.inf`.
+## 4. Systems Design
 
-### 3.4 Character Growth
-- Stats, HP/MP, and progression are managed through player level tables.
-- Equipment and consumables are data-driven from `assets/res/inf/items.inf`.
-- Spell definitions and behavior are loaded from `assets/res/inf/spells.inf`.
+### Character and Progression
+- Leveling and player stat growth
+- Item-based upgrades
+- Spell and ability progression
+- Resource management (HP/MP and related subsystems)
 
-### 3.5 Economy And Inventory
-- Shop interactions support buying/selling/equipment tradeoffs.
-- Inventory constraints and item-specific script behavior are enforced by core logic.
-- Gold (`G`) flow is central to advancement and preparation loops.
+### Combat
+- Turn-based battle state machine
+- Enemy encounter probabilities tied to tiles/zones
+- Damage and resistance mechanics from framework definitions
+- Boss tiers and difficulty scaling
 
-### 3.6 Quests
-- A quest container system exists (`dq1.core.Quest`) with:
-  - Quest definitions (`id`, `name`, `description`)
-  - Objectives/rewards
-  - Completion state
-- Quest UI hooks are present in title/menu flow.
-- Current quest content population is expected to be expanded by script/data integration.
+### Economy and Rewards
+- XP and gold rewards
+- Loot table-driven item acquisition
+- Shop/inventory flow
 
-### 3.7 Save/Load
-- Save data serializes script global variables to files in user home:
-  - `save_1.dat`, `save_2.dat`, `save_3.dat` (plus extra slot handling in menu paths)
-- Save payload includes map position, player state, and configuration-linked values.
+## 5. Technical Content Pipeline
 
-## 4. Content Model
+### Data-Driven Assets
+- Maps: `assets/res/map/*.map`
+- Events: `assets/res/event/*.evt`
+- Tile metadata: `assets/res/inf/tileset.inf`
+- Combat data CSVs: `docs/data/*.csv`
+- Audio tracks: `assets/res/audio/*.mid`
 
-### 4.1 Data-Driven Assets
-- `texts.inf`: localized/system text keys.
-- `musics.inf`: BGM definitions and loop metadata.
-- `tileset.inf`: tile behavior (blocked, damage, encounter probability, battle background).
-- `zones.inf`: zone descriptors for area scaling/world grouping.
+### Authoring Method
+- Use editor tabs for map, entities, story, and audio tuning
+- Export intermediate datasets for balancing and review
+- Integrate and test in runtime using Ant build/run loop
 
-### 4.2 Maps In Scope
-- `world`
-- `tantegel_castle`
-- `brecconary`
-- `garinham`
-- `rimuldar`
-- `kol`
-- `cantlin`
-- `hauksness`
-- `charlock_castle`
-- `erdricks_cave`
-- `rock_mountain_cave`
-- `shrine`
-- `swamp_cave`
+## 6. UX and UI Design
 
-## 5. UI/UX
+### Runtime UI
+- RPG text and menu systems
+- Map overlay and optional framework panels
+- Debug/diagnostic overlays where needed
 
-### 5.1 Presentation
-- Native pixel-art style composition on layered buffers.
-- Fade, flash, and shake effects for transitions and battle emphasis.
-- Retro-oriented title and text pacing.
+### Editor UI
+- Tabbed tool suite with focused workflows:
+  - Map Design
+  - Pixels
+  - Audio
+  - Graphics
+  - Story
+  - Entity editors
+  - Visual scripting integration
 
-### 5.2 Input
-- Default keyboard controls:
-  - Arrow keys: movement
-  - `X`: confirm
-  - `Z`: cancel
-- Newer code paths expose settings menu options for remapping and display toggles.
+## 7. Audio Direction
 
-## 6. Technical Constraints
+- MIDI soundtrack with loop control and map-specific assignments
+- Soundbank-driven SFX triggers for gameplay feedback
+- User-configurable music and sound volume
 
-- Runtime uses Java desktop stack only (AWT/Swing/Java2D/Java Sound).
-- No mandatory third-party engine dependency.
-- Script command registration is reflection-based; command signatures must stay stable.
+## 8. Narrative Direction
 
-## 7. Risks And Follow-Up
+- Classic hero quest arc with kingdom, ruins, caves, and final threat
+- Chapterized narrative allows modular expansion
+- Side quests support world depth and optional progression
 
-- `dq1` and `mmorpg` modules coexist; scope boundaries must remain explicit.
-- Save slot UI supports more slots than legacy comments document; reconcile UX copy and backend guarantees.
-- Quest and settings features include scaffold/partial implementations that should be validated end-to-end.
+## 9. Scope and Milestones
+
+### Current
+- Playable runtime foundation
+- Core editor modules implemented
+- Combat framework documentation and data sheets present
+
+### Near-Term
+- Story persistence/export workflows
+- Expanded AI scripting integration
+- Polished editor UX and validation tooling
+
+### Long-Term
+- Campaign-scale content production tooling
+- Live balancing pipeline
+- Optional networking/authoritative server experiments
+
+## 10. Success Metrics
+
+- Stable run/build cycle
+- Designer can create and edit maps/quests/audio without code changes
+- Consistent combat balance across content tiers
+- Clear documentation coverage for onboarding and contribution
