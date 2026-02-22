@@ -4,6 +4,8 @@ public class PlayerRpgProfile {
 
     private CharacterClass characterClass;
     private int level;
+    private int currentHp;
+    private int currentMp;
     private final RpgStats baseStats = new RpgStats();
     private final InventorySystem inventory;
     private final EquipmentSystem equipment = new EquipmentSystem();
@@ -13,6 +15,8 @@ public class PlayerRpgProfile {
         this.characterClass = characterClass;
         this.level = level;
         this.inventory = new InventorySystem(maxInventorySlots);
+        this.currentHp = 1;
+        this.currentMp = 0;
     }
 
     public CharacterClass getCharacterClass() {
@@ -66,5 +70,86 @@ public class PlayerRpgProfile {
             total.addModifier(modifier);
         }
         return total;
+    }
+
+    public int getCurrentHp() {
+        return currentHp;
+    }
+
+    public int getCurrentMp() {
+        return currentMp;
+    }
+
+    public int getMaxHp() {
+        return getTotalStats().get(RpgAttribute.MAX_HP);
+    }
+
+    public int getMaxMp() {
+        return getTotalStats().get(RpgAttribute.MAX_MP);
+    }
+
+    public void resetResourcesToMax() {
+        currentHp = Math.max(1, getMaxHp());
+        currentMp = Math.max(0, getMaxMp());
+    }
+
+    public void healHp(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        int maxHp = Math.max(1, getMaxHp());
+        currentHp += amount;
+        if (currentHp > maxHp) {
+            currentHp = maxHp;
+        }
+    }
+
+    public void restoreMp(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        int maxMp = Math.max(0, getMaxMp());
+        currentMp += amount;
+        if (currentMp > maxMp) {
+            currentMp = maxMp;
+        }
+    }
+
+    public boolean spendMp(int amount) {
+        if (amount < 0) {
+            return false;
+        }
+        if (currentMp < amount) {
+            return false;
+        }
+        currentMp -= amount;
+        return true;
+    }
+
+    public void clampResources() {
+        int maxHp = Math.max(1, getMaxHp());
+        int maxMp = Math.max(0, getMaxMp());
+        if (currentHp <= 0) {
+            currentHp = 1;
+        }
+        if (currentHp > maxHp) {
+            currentHp = maxHp;
+        }
+        if (currentMp < 0) {
+            currentMp = 0;
+        }
+        if (currentMp > maxMp) {
+            currentMp = maxMp;
+        }
+    }
+
+    public void setCurrentHp(int currentHp) {
+        this.currentHp = currentHp;
+        clampResources();
+    }
+
+    public void setCurrentMp(int currentMp) {
+        this.currentMp = currentMp;
+        clampResources();
     }
 }

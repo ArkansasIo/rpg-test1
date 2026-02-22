@@ -67,6 +67,8 @@ public final class RpgSystems {
         lines.add("HP " + stats.get(RpgAttribute.MAX_HP)
                 + "  MP " + stats.get(RpgAttribute.MAX_MP)
                 + "  LUCK " + stats.get(RpgAttribute.LUCK));
+        lines.add("Current HP/MP: " + p.getCurrentHp() + "/" + p.getMaxHp()
+                + " | " + p.getCurrentMp() + "/" + p.getMaxMp());
         return lines;
     }
 

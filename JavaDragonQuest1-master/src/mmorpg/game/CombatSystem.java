@@ -1,5 +1,7 @@
 package mmorpg.game;
 
+import dq1.core.Spell;
+import mmorpg.entities.Item;
 import mmorpg.entities.Player;
 import mmorpg.entities.Monster;
 import java.util.Random;
@@ -11,14 +13,6 @@ public class CombatSystem {
     public static boolean engage(Player player, Monster monster) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("A wild " + monster.getName() + " (Lv." + monster.getLevel() + ", " + monster.getType() + ") appears!");
-        boolean isBoss = monster instanceof Boss;
-        if (isBoss) {
-            Boss boss = (Boss) monster;
-            System.out.println("Boss Type: " + boss.getBossTypeName() + " | Class: " + boss.getBossClassName());
-            if (boss.isWorldBoss()) {
-                System.out.println("World Boss Encounter!");
-            }
-        }
         while (player.isAlive() && monster.isAlive()) {
             System.out.println("\nPlayer HP: " + player.getHp() + " | Mana: " + player.getMana() + " | " + monster.getName() + " HP: " + monster.getHp());
             System.out.println("Choose action: [A]ttack, [S]pell, [I]tem, [R]un");
@@ -39,15 +33,15 @@ public class CombatSystem {
                     System.out.println("Choose item to use:");
                     for (int idx = 0; idx < player.getInventory().size(); idx++) {
                         Item item = player.getInventory().get(idx);
-                        System.out.println("[" + idx + "] " + item.getName() + " (Lv." + item.getLevel() + ")");
+                        System.out.println("[" + idx + "] " + item.getName() + " (Tier " + item.getTier() + ")");
                     }
                     int itemIdx = -1;
                     try { itemIdx = Integer.parseInt(scanner.nextLine()); } catch (Exception ignored) {}
                     if (itemIdx >= 0 && itemIdx < player.getInventory().size()) {
                         Item item = player.getInventory().get(itemIdx);
                         System.out.println("Used " + item.getName() + ".");
-                        // Example: heal or buff
-                        player.heal(item.getLevel());
+                        // Simple consumable behavior: heal by item tier.
+                        player.heal(Math.max(1, item.getTier() * 2));
                     } else {
                         System.out.println("Invalid item selection.");
                     }
@@ -55,10 +49,13 @@ public class CombatSystem {
                 continue;
             }
             if (input.equals("s")) {
+                if (player.getMana() < 5) {
+                    System.out.println("Not enough mana.");
+                    continue;
+                }
                 System.out.println("Choose spell to cast:");
-                // Stub: list spells
-                Spell spell = new Spell();
-                spell.setLevel(player.getLevel());
+                Spell spell = new Spell(9999, "MMO Spell", player.getLevel(), 5
+                        , true, false, "Arcane", "Basic", "Normal", "None", "None", 0);
                 spell.setSchool(random.nextInt(800));
                 spell.setMagicClass(random.nextInt(800));
                 System.out.println("Casting " + spell.getSchoolName() + " / " + spell.getMagicClassName() + " (Lv." + spell.getLevel() + ")");

@@ -84,6 +84,7 @@ public final class RpgContentDatabase {
 
         profile.applyEffect(battleShout);
         profile.applyEffect(weakened);
+        profile.resetResourcesToMax();
 
         return profile;
     }

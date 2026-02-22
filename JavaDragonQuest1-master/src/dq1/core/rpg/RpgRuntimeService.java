@@ -2,6 +2,8 @@ package dq1.core.rpg;
 
 import dq1.core.Script;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,15 +74,16 @@ public class RpgRuntimeService {
             return RpgActionResult.fail(RpgActionType.CONSUME, "No consumable in inventory.");
         }
 
-        List<AttributeModifier> modifiers = item.getAttributes();
-        if (modifiers.isEmpty()) {
-            profile.getBaseStats().add(RpgAttribute.MAX_HP, 1);
+        // Consumables primarily restore resources. Secondary effects update stats.
+        int healAmount = 4 + (item.getRarity().ordinal() * 3);
+        int manaAmount = 2 + (item.getRarity().ordinal() * 2);
+        profile.healHp(healAmount);
+        profile.restoreMp(manaAmount);
+
+        for (AttributeModifier modifier : item.getAttributes()) {
+            profile.getBaseStats().add(modifier.getAttribute(), modifier.getValue() / 2);
         }
-        else {
-            for (AttributeModifier modifier : modifiers) {
-                profile.getBaseStats().add(modifier.getAttribute(), modifier.getValue());
-            }
-        }
+        profile.clampResources();
         syncToLegacyGlobals();
         return RpgActionResult.ok(RpgActionType.CONSUME, "Consumed " + item.getName());
     }
@@ -131,6 +134,7 @@ public class RpgRuntimeService {
 
     public void nextTurn() {
         profile.tickTurnEffects();
+        applyPassiveRegen();
         exportToGlobals();
     }
 
@@ -152,6 +156,8 @@ public class RpgRuntimeService {
     }
 
     public void seedDefaultHotbar() {
+        hotbar.clearSlot(1);
+        hotbar.clearSlot(2);
         for (InventorySystem.InventoryEntry entry : profile.getInventory().getEntries()) {
             if (entry.getDefinition().getKind() == ItemKind.CONSUMABLE) {
                 hotbar.bindItem(1, entry.getDefinition().getId());
@@ -164,6 +170,75 @@ public class RpgRuntimeService {
                 break;
             }
         }
+    }
+
+    public RpgActionResult autoEquipBestLoadout() {
+        EnumMap<EquipmentSlot, RpgItemDefinition> bestBySlot
+                = new EnumMap<>(EquipmentSlot.class);
+        for (InventorySystem.InventoryEntry entry : profile.getInventory().getEntries()) {
+            RpgItemDefinition item = entry.getDefinition();
+            EquipmentSlot slot = item.getSlot();
+            if (slot == null || !item.canEquip(profile.getCharacterClass())) {
+                continue;
+            }
+            RpgItemDefinition currentBest = bestBySlot.get(slot);
+            if (currentBest == null || compareItemPower(item, currentBest) > 0) {
+                bestBySlot.put(slot, item);
+            }
+        }
+
+        int equipped = 0;
+        for (Map.Entry<EquipmentSlot, RpgItemDefinition> entry : bestBySlot.entrySet()) {
+            RpgActionResult result = equipFromInventory(entry.getValue().getId());
+            if (result.isSuccess()) {
+                equipped++;
+            }
+        }
+        if (equipped == 0) {
+            return RpgActionResult.fail(RpgActionType.EQUIP, "No better equipment found.");
+        }
+        return RpgActionResult.ok(RpgActionType.EQUIP, "Auto-equipped " + equipped + " slots.");
+    }
+
+    public RpgActionResult autoBindHotbar() {
+        List<RpgItemDefinition> items = new ArrayList<>();
+        for (InventorySystem.InventoryEntry entry : profile.getInventory().getEntries()) {
+            items.add(entry.getDefinition());
+        }
+        items.sort(Comparator.comparingInt(this::itemPowerScore).reversed());
+        int slot = 1;
+        for (RpgItemDefinition item : items) {
+            if (slot > 10) {
+                break;
+            }
+            hotbar.bindItem(slot, item.getId());
+            slot++;
+        }
+        exportToGlobals();
+        return RpgActionResult.ok(RpgActionType.HOTBAR_TRIGGER, "Auto-bound " + (slot - 1) + " hotbar slots.");
+    }
+
+    private int compareItemPower(RpgItemDefinition a, RpgItemDefinition b) {
+        return Integer.compare(itemPowerScore(a), itemPowerScore(b));
+    }
+
+    private int itemPowerScore(RpgItemDefinition item) {
+        RpgStats s = item.getBaseStats();
+        int score = 0;
+        score += s.get(RpgAttribute.ATTACK_POWER) * 4;
+        score += s.get(RpgAttribute.DEFENSE) * 4;
+        score += s.get(RpgAttribute.MAX_HP) * 2;
+        score += s.get(RpgAttribute.MAX_MP) * 2;
+        score += item.getRarity().ordinal() * 6;
+        return score;
+    }
+
+    private void applyPassiveRegen() {
+        profile.healHp(1);
+        if (profile.getCurrentMp() < profile.getMaxMp()) {
+            profile.restoreMp(1);
+        }
+        profile.clampResources();
     }
 
     private void syncToLegacyGlobals() {
@@ -179,11 +254,18 @@ public class RpgRuntimeService {
             Script.setGlobalValue("##rpg_total_def", stats.get(RpgAttribute.DEFENSE));
             Script.setGlobalValue("##rpg_total_hp", stats.get(RpgAttribute.MAX_HP));
             Script.setGlobalValue("##rpg_total_mp", stats.get(RpgAttribute.MAX_MP));
+            Script.setGlobalValue("##rpg_current_hp", profile.getCurrentHp());
+            Script.setGlobalValue("##rpg_current_mp", profile.getCurrentMp());
             Script.setGlobalValue("##rpg_active_effects"
                     , profile.getBuffDebuffManager().getActiveEffects().size());
             for (int slot = 1; slot <= 10; slot++) {
                 Integer itemId = hotbar.getBoundItemId(slot);
                 Script.setGlobalValue("##rpg_hotbar_" + slot, itemId == null ? 0 : itemId);
+            }
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
+                RpgItemDefinition equipped = profile.getEquipment().getEquippedItems().get(slot);
+                Script.setGlobalValue("##rpg_equip_" + slot.name(),
+                        equipped == null ? 0 : equipped.getId());
             }
         }
         catch (Exception ignored) {
@@ -205,6 +287,14 @@ public class RpgRuntimeService {
             if (levelObj instanceof Integer) {
                 profile.setLevel((Integer) levelObj);
             }
+            Object hpObj = Script.getGlobalValue("##rpg_current_hp");
+            if (hpObj instanceof Integer) {
+                profile.setCurrentHp((Integer) hpObj);
+            }
+            Object mpObj = Script.getGlobalValue("##rpg_current_mp");
+            if (mpObj instanceof Integer) {
+                profile.setCurrentMp((Integer) mpObj);
+            }
 
             for (int slot = 1; slot <= 10; slot++) {
                 Object hotbarObj = Script.getGlobalValue("##rpg_hotbar_" + slot);
@@ -214,6 +304,18 @@ public class RpgRuntimeService {
                 }
                 else {
                     hotbar.clearSlot(slot);
+                }
+            }
+
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
+                Object equipObj = Script.getGlobalValue("##rpg_equip_" + slot.name());
+                int itemId = equipObj instanceof Integer ? (Integer) equipObj : 0;
+                if (itemId > 0) {
+                    RpgItemDefinition item = definitions.get(itemId);
+                    if (item != null && item.getSlot() == slot
+                            && item.canEquip(profile.getCharacterClass())) {
+                        profile.getEquipment().equip(item, profile.getCharacterClass());
+                    }
                 }
             }
         }

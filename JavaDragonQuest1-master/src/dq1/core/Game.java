@@ -20,6 +20,7 @@ import mmorpg.entities.FantasyEntityCatalog;
 import mmorpg.entities.FantasyEntityGroup;
 import mmorpg.entities.FantasyEntityProfile;
 import mmorpg.game.FeatureRegistry;
+import mmorpg.ui.DiabloInventoryFrame;
 import mmorpg.ui.WowMapCatalogFrame;
 import mmorpg.ui.WowUiFrame;
 import mmorpg.world.WoWTileMapSystem;
@@ -380,11 +381,15 @@ public class Game {
     private static int playerNameCursorIndex = 0;
     private static boolean playerNameConfirmed = false;
     private static boolean playerNameCanceled = false;
+    private static int lastNameInputKeyCode = -1;
+    private static long lastNameInputTimeMs = 0L;
 
     private static void resetGameTypePlayersName() {
         playerNameCursorIndex = 0;
         playerNameConfirmed = false;
         playerNameCanceled = false;
+        lastNameInputKeyCode = -1;
+        lastNameInputTimeMs = 0L;
         Arrays.fill(PLAYER_NAME, ' ');
     }
     
@@ -440,6 +445,14 @@ public class Game {
         @Override
         public void keyPressed(KeyEvent e) {
             synchronized (KEY_HANDLER) {
+                long nowMs = System.currentTimeMillis();
+                int keyCode = e.getKeyCode();
+                if (keyCode == lastNameInputKeyCode && nowMs - lastNameInputTimeMs < 90) {
+                    return;
+                }
+                lastNameInputKeyCode = keyCode;
+                lastNameInputTimeMs = nowMs;
+
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     playerNameCanceled = true;
                 }
@@ -498,7 +511,14 @@ public class Game {
             if (exitMap || state != MAP) {
                 break;
             }
+            int beforeCol = Player.getMapCol();
+            int beforeRow = Player.getMapRow();
             Player.update();
+            int afterCol = Player.getMapCol();
+            int afterRow = Player.getMapRow();
+            if (beforeCol != afterCol || beforeRow != afterRow) {
+                RpgSystems.getRuntime().nextTurn();
+            }
             // play can select "load game" option
             if (state != MAP) {
                 break;
@@ -1738,6 +1758,9 @@ public class Game {
                 case KEYBINDS:
                     showWoWKeybindPanel();
                     break;
+                case DIABLO_INVENTORY:
+                    SwingUtilities.invokeLater(() -> new DiabloInventoryFrame().setVisible(true));
+                    break;
                 case EXTERNAL_FRAME:
                     SwingUtilities.invokeLater(() -> new WowUiFrame().setVisible(true));
                     break;
@@ -1869,10 +1892,12 @@ public class Game {
                 "Unequip main hand",
                 "Use first consumable",
                 "Change class",
+                "Auto-equip best loadout",
+                "Auto-bind hotbar",
                 "Advance effect turn",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(8, 9, 31, 8, -1, options);
+            int option = Dialog.showOptionsMenu(8, 9, 31, 10, -1, options);
             RpgRuntimeService runtime = RpgSystems.getRuntime();
             RpgActionResult result;
             switch (option) {
@@ -1892,10 +1917,18 @@ public class Game {
                     showClassSelector(runtime);
                     break;
                 case 4:
+                    result = runtime.autoEquipBestLoadout();
+                    showUiToast(result.getMessage());
+                    break;
+                case 5:
+                    result = runtime.autoBindHotbar();
+                    showUiToast(result.getMessage());
+                    break;
+                case 6:
                     runtime.nextTurn();
                     showUiToast("Advanced one RPG turn.");
                     break;
-                case 5:
+                case 7:
                 case -1:
                     exit = true;
                     break;

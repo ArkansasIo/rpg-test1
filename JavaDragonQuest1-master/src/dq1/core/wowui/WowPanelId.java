@@ -8,5 +8,6 @@ public enum WowPanelId {
     PARTY,
     HOTBAR,
     KEYBINDS,
+    DIABLO_INVENTORY,
     EXTERNAL_FRAME
 }

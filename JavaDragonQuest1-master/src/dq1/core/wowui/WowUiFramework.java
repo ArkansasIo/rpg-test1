@@ -34,6 +34,9 @@ public class WowUiFramework {
                 WowPanelId.KEYBINDS, "Keybinds Panel",
                 "WOW KEYBINDS PANEL", "Keyboard and menu shortcuts"));
         framework.register(new WowPanelModel(
+                WowPanelId.DIABLO_INVENTORY, "Diablo Inventory UI",
+                "DIABLO INVENTORY", "Grid inventory, equipment slots, character stats"));
+        framework.register(new WowPanelModel(
                 WowPanelId.EXTERNAL_FRAME, "Open External WoW Frame",
                 "WOW EXTERNAL UI", "Open Swing-based external frame"));
         return framework;
@@ -56,6 +59,7 @@ public class WowUiFramework {
                 WowPanelId.PARTY,
                 WowPanelId.HOTBAR,
                 WowPanelId.KEYBINDS,
+                WowPanelId.DIABLO_INVENTORY,
                 WowPanelId.EXTERNAL_FRAME);
     }
 
