@@ -1,5 +1,6 @@
 package dq1.editor;
 
+import dq1.editor.audio.EditorAudioAPI;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.BufferedReader;
@@ -61,7 +62,7 @@ public class VisualScriptingPanel extends JPanel {
             try (PrintWriter pw = new PrintWriter(chooser.getSelectedFile())) {
                 // Save nodes
                 for (Node n : nodes) {
-                    pw.println("NODE," + n.label + "," + n.x + "," + n.y + "," + n.type);
+                    pw.println("NODE," + n.label + "," + n.x + "," + n.y + "," + n.type + (n.type == NodeType.ACTION && n.actionParam != null ? (","+n.actionParam) : ""));
                 }
                 // Save connections (by node index)
                 for (Connection c : connections) {
@@ -96,7 +97,9 @@ public class VisualScriptingPanel extends JPanel {
                             int x = Integer.parseInt(parts[2]);
                             int y = Integer.parseInt(parts[3]);
                             NodeType type = NodeType.valueOf(parts[4]);
-                            nodes.add(new Node(label, x, y, type));
+                            Node n = new Node(label, x, y, type);
+                            if (type == NodeType.ACTION && parts.length >= 6) n.actionParam = parts[5];
+                            nodes.add(n);
                         }
                     }
                 }
@@ -190,7 +193,10 @@ public class VisualScriptingPanel extends JPanel {
         });
         JMenuItem addAction = new JMenuItem("Add Action Node");
         addAction.addActionListener(e -> {
-            nodes.add(new Node("Action", p.x, p.y, NodeType.ACTION));
+            String param = JOptionPane.showInputDialog(this, "Enter preset name to play:");
+            Node n = new Node("Action", p.x, p.y, NodeType.ACTION);
+            n.actionParam = param;
+            nodes.add(n);
             repaint();
         });
         JMenuItem addVariable = new JMenuItem("Add Variable Node");
@@ -241,6 +247,7 @@ public class VisualScriptingPanel extends JPanel {
         String label;
         int x, y;
         NodeType type;
+        String actionParam; // used by ACTION nodes to store e.g., preset name
         public Node(String label, int x, int y, NodeType type) {
             this.label = label;
             this.x = x;
@@ -264,6 +271,10 @@ public class VisualScriptingPanel extends JPanel {
             g2.drawRoundRect(x, y, WIDTH, HEIGHT, 16, 16);
             g2.setColor(Color.WHITE);
             g2.drawString(label, x + 10, y + 25);
+            if (type == NodeType.ACTION && actionParam != null) {
+                g2.setColor(Color.WHITE);
+                g2.drawString("-> " + actionParam, x + 10, y + 40);
+            }
         }
     }
 
@@ -290,6 +301,10 @@ public class VisualScriptingPanel extends JPanel {
     private void executeFrom(Node node, Set<Node> visited) {
         if (!visited.add(node)) return;
         System.out.println("Executing node: " + node.label);
+        // If action node with an actionParam, treat it as an audio preset name and play it
+        if (node.type == NodeType.ACTION && node.actionParam != null) {
+            EditorAudioAPI.playPreset(node.actionParam);
+        }
         for (Connection c : connections) {
             if (c.from == node) {
                 executeFrom(c.to, visited);
