@@ -1,4 +1,4 @@
-package dq1.tools;
+ols and package dq1.tools;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.AudioFileFormat;

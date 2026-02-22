@@ -12,6 +12,7 @@ import javax.swing.*;
 /**
  * Minimal Visual Scripting Editor inspired by Unreal Blueprints.
  * Allows adding nodes, connecting them, and basic graph execution.
+ * Extended with blueprint-like nodes: PLAY_SOUND, DELAY, SET_VAR, BRANCH.
  */
 public class VisualScriptingPanel extends JPanel {
     private java.util.List<Node> nodes = new ArrayList<>();
@@ -62,7 +63,7 @@ public class VisualScriptingPanel extends JPanel {
             try (PrintWriter pw = new PrintWriter(chooser.getSelectedFile())) {
                 // Save nodes
                 for (Node n : nodes) {
-                    pw.println("NODE," + n.label + "," + n.x + "," + n.y + "," + n.type + (n.type == NodeType.ACTION && n.actionParam != null ? (","+n.actionParam) : ""));
+                    pw.println("NODE," + n.label + "," + n.x + "," + n.y + "," + n.type + (n.actionParam != null ? (","+n.actionParam) : ""));
                 }
                 // Save connections (by node index)
                 for (Connection c : connections) {
@@ -91,14 +92,14 @@ public class VisualScriptingPanel extends JPanel {
                 // First pass: nodes
                 for (String l : lines) {
                     if (l.startsWith("NODE,")) {
-                        String[] parts = l.split(",");
+                        String[] parts = l.split(",", 6);
                         if (parts.length >= 5) {
                             String label = parts[1];
                             int x = Integer.parseInt(parts[2]);
                             int y = Integer.parseInt(parts[3]);
                             NodeType type = NodeType.valueOf(parts[4]);
                             Node n = new Node(label, x, y, type);
-                            if (type == NodeType.ACTION && parts.length >= 6) n.actionParam = parts[5];
+                            if (parts.length >= 6) n.actionParam = parts[5];
                             nodes.add(n);
                         }
                     }
@@ -193,8 +194,40 @@ public class VisualScriptingPanel extends JPanel {
         });
         JMenuItem addAction = new JMenuItem("Add Action Node");
         addAction.addActionListener(e -> {
-            String param = JOptionPane.showInputDialog(this, "Enter preset name to play:");
+            String param = JOptionPane.showInputDialog(this, "Enter action param (e.g. play:presetName or playfile:filename):");
             Node n = new Node("Action", p.x, p.y, NodeType.ACTION);
+            n.actionParam = param;
+            nodes.add(n);
+            repaint();
+        });
+        JMenuItem addPlay = new JMenuItem("Add PlaySound Node");
+        addPlay.addActionListener(e -> {
+            String param = JOptionPane.showInputDialog(this, "Enter preset name or filename to play:");
+            Node n = new Node("PlaySound", p.x, p.y, NodeType.PLAY_SOUND);
+            n.actionParam = param;
+            nodes.add(n);
+            repaint();
+        });
+        JMenuItem addDelay = new JMenuItem("Add Delay Node");
+        addDelay.addActionListener(e -> {
+            String param = JOptionPane.showInputDialog(this, "Enter delay milliseconds:");
+            Node n = new Node("Delay", p.x, p.y, NodeType.DELAY);
+            n.actionParam = param;
+            nodes.add(n);
+            repaint();
+        });
+        JMenuItem addSetVar = new JMenuItem("Add SetVar Node");
+        addSetVar.addActionListener(e -> {
+            String param = JOptionPane.showInputDialog(this, "Enter varName=value:");
+            Node n = new Node("SetVar", p.x, p.y, NodeType.SET_VAR);
+            n.actionParam = param;
+            nodes.add(n);
+            repaint();
+        });
+        JMenuItem addBranch = new JMenuItem("Add Branch Node");
+        addBranch.addActionListener(e -> {
+            String param = JOptionPane.showInputDialog(this, "Enter condition (e.g. var==value):");
+            Node n = new Node("Branch", p.x, p.y, NodeType.BRANCH);
             n.actionParam = param;
             nodes.add(n);
             repaint();
@@ -206,6 +239,10 @@ public class VisualScriptingPanel extends JPanel {
         });
         menu.add(addEvent);
         menu.add(addAction);
+        menu.add(addPlay);
+        menu.add(addDelay);
+        menu.add(addSetVar);
+        menu.add(addBranch);
         menu.add(addVariable);
         menu.show(this, p.x, p.y);
     }
@@ -263,6 +300,10 @@ public class VisualScriptingPanel extends JPanel {
                 case EVENT: color = new Color(0x4CAF50); break;
                 case ACTION: color = new Color(0x2196F3); break;
                 case VARIABLE: color = new Color(0xFFC107); break;
+                case PLAY_SOUND: color = new Color(0x9C27B0); break;
+                case DELAY: color = new Color(0x795548); break;
+                case SET_VAR: color = new Color(0x3F51B5); break;
+                case BRANCH: color = new Color(0xF44336); break;
                 default: color = Color.GRAY;
             }
             g2.setColor(color);
@@ -270,10 +311,11 @@ public class VisualScriptingPanel extends JPanel {
             g2.setColor(Color.BLACK);
             g2.drawRoundRect(x, y, WIDTH, HEIGHT, 16, 16);
             g2.setColor(Color.WHITE);
-            g2.drawString(label, x + 10, y + 25);
-            if (type == NodeType.ACTION && actionParam != null) {
+            g2.drawString(label, x + 10, y + 20);
+            if ((type == NodeType.ACTION || type == NodeType.PLAY_SOUND || type == NodeType.SET_VAR || type == NodeType.BRANCH || type == NodeType.DELAY) && actionParam != null) {
                 g2.setColor(Color.WHITE);
-                g2.drawString("-> " + actionParam, x + 10, y + 40);
+                String preview = actionParam.length() > 20 ? actionParam.substring(0, 20) + "..." : actionParam;
+                g2.drawString("-> " + preview, x + 10, y + 36);
             }
         }
     }
@@ -287,28 +329,94 @@ public class VisualScriptingPanel extends JPanel {
         }
     }
 
-    enum NodeType { EVENT, ACTION, VARIABLE }
+    enum NodeType { EVENT, ACTION, VARIABLE, PLAY_SOUND, DELAY, SET_VAR, BRANCH }
 
-    // Example: execute the graph (very basic, just prints execution order)
+    // Example: execute the graph (very basic, supports new node types)
     public void executeGraph() {
         Set<Node> visited = new HashSet<>();
+        // runtime variable table
+        Map<String, String> vars = new HashMap<>();
         for (Node node : nodes) {
             if (node.type == NodeType.EVENT) {
-                executeFrom(node, visited);
+                executeFrom(node, visited, vars);
             }
         }
     }
-    private void executeFrom(Node node, Set<Node> visited) {
+    private void executeFrom(Node node, Set<Node> visited, Map<String,String> vars) {
         if (!visited.add(node)) return;
-        System.out.println("Executing node: " + node.label);
-        // If action node with an actionParam, treat it as an audio preset name and play it
-        if (node.type == NodeType.ACTION && node.actionParam != null) {
-            EditorAudioAPI.playPreset(node.actionParam);
+        System.out.println("Executing node: " + node.label + " (" + node.type + ")");
+        try {
+            switch (node.type) {
+                case ACTION:
+                    if (node.actionParam != null) {
+                        // support direct play or generic commands
+                        if (node.actionParam.startsWith("play:") ) {
+                            String arg = node.actionParam.substring(5);
+                            EditorAudioAPI.playPreset(arg);
+                        } else if (node.actionParam.startsWith("playfile:")) {
+                            String fn = node.actionParam.substring(9);
+                            EditorAudioAPI.playFileByName(fn);
+                        } else {
+                            System.out.println("Action param: " + node.actionParam);
+                        }
+                    }
+                    break;
+                case PLAY_SOUND:
+                    if (node.actionParam != null) {
+                        // try preset first, else file
+                        String p = node.actionParam;
+                        if (p.contains(".")) {
+                            EditorAudioAPI.playFileByName(p);
+                        } else {
+                            EditorAudioAPI.playPreset(p);
+                        }
+                    }
+                    break;
+                case DELAY:
+                    try {
+                        long ms = Long.parseLong(node.actionParam == null ? "0" : node.actionParam.trim());
+                        Thread.sleep(Math.max(0, ms));
+                    } catch (Exception ignored) {}
+                    break;
+                case SET_VAR:
+                    if (node.actionParam != null && node.actionParam.contains("=")) {
+                        String[] parts = node.actionParam.split("=",2);
+                        vars.put(parts[0].trim(), parts[1].trim());
+                        System.out.println("Set var: " + parts[0].trim() + " = " + parts[1].trim());
+                    }
+                    break;
+                case BRANCH:
+                    boolean takeFirst = true; // default
+                    if (node.actionParam != null && node.actionParam.contains("==")) {
+                        String[] parts = node.actionParam.split("==",2);
+                        String v = vars.get(parts[0].trim());
+                        takeFirst = parts[1].trim().equals(v == null ? "" : v);
+                        System.out.println("Branch eval: " + parts[0].trim() + " -> '" + v + "' == '" + parts[1].trim() + "' => " + takeFirst);
+                    }
+                    // for branch, choose successor: first = true, second = false
+                    java.util.List<Node> succs = getSuccessors(node);
+                    if (takeFirst && succs.size() > 0) executeFrom(succs.get(0), visited, vars);
+                    if (!takeFirst && succs.size() > 1) executeFrom(succs.get(1), visited, vars);
+                    return; // do not auto-traverse other successors
+                default:
+                    break;
+            }
+        } catch (Exception ex) {
+            System.err.println("Runtime error on node: " + ex.getMessage());
         }
+        // continue to all successors
         for (Connection c : connections) {
             if (c.from == node) {
-                executeFrom(c.to, visited);
+                executeFrom(c.to, visited, vars);
             }
         }
+    }
+
+    private java.util.List<Node> getSuccessors(Node n) {
+        java.util.List<Node> out = new ArrayList<>();
+        for (Connection c : connections) {
+            if (c.from == n) out.add(c.to);
+        }
+        return out;
     }
 }
