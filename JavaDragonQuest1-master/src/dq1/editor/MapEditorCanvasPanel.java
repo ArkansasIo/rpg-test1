@@ -159,6 +159,12 @@ public class MapEditorCanvasPanel extends JPanel {
         this.tilePickListener = tilePickListener;
     }
 
+    // Public wrappers for external bindings (used by Inspector and other panels)
+    public void beginStrokePublic() { beginStroke(); }
+    public void commitStrokePublic() { commitStroke(); }
+    public void changeCellPublic(int row, int col, int newValue) { changeCell(row, col, newValue); }
+    public int getVisibleTileIdAt(int row, int col) { return getVisibleTileId(row, col); }
+
     public void setBrushTileId(int value) {
         brushTileId = Math.max(0, value);
     }
@@ -680,4 +686,7 @@ public class MapEditorCanvasPanel extends JPanel {
     public Map<Long, String> getAudioAttachments() {
         return audioAttachments;
     }
+
+    // Public accessor for map id
+    public String getMapId() { return mapId; }
 }

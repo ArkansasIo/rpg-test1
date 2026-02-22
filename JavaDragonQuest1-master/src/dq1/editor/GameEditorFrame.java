@@ -3,13 +3,20 @@ package dq1.editor;
 import dq1.core.GameAPI;
 import dq1.core.WoWZoneSystem;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -22,6 +29,17 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import dq1.editor.panels.ContentBrowserPanel;
+import dq1.editor.panels.WorldOutlinerPanel;
+import dq1.editor.panels.InspectorPanelStub;
+import dq1.editor.panels.TilePalettePanel;
+import dq1.editor.panels.AnimationPanel;
+import dq1.editor.panels.VisualScriptingPanelStub;
+import dq1.editor.panels.DocsViewerPanel;
+import dq1.editor.panels.ConsolePanel;
+import dq1.editor.panels.ProfilerPanel;
+import dq1.editor.panels.AudioMixerPanel;
+import dq1.editor.panels.VersionControlPanel;
 
 /**
  * Updated editor shell for game, engine, and framework tooling.
@@ -39,6 +57,8 @@ public class GameEditorFrame extends JFrame {
     private final JTextArea mapDesignInfoArea = createTextArea();
     private final PixelTilesetEditorPanel pixelEditorPanel = new PixelTilesetEditorPanel();
     private final MapEditorCanvasPanel mapCanvasPanel = new MapEditorCanvasPanel();
+    private final TilePalettePanel tilePalettePanel = new TilePalettePanel();
+    private final InspectorPanelStub inspectorPanel = new InspectorPanelStub();
     private JComboBox<String> mapSelector;
     private JComboBox<MapEditorCanvasPanel.Tool> toolSelector;
     private JComboBox<MapEditorCanvasPanel.Layer> layerSelector;
@@ -56,6 +76,18 @@ public class GameEditorFrame extends JFrame {
     private final RenderGraphicsEditorPanel renderGraphicsEditorPanel = new RenderGraphicsEditorPanel();
     private final StorySystemsEditorPanel storySystemsEditorPanel = new StorySystemsEditorPanel();
 
+    // Track undocked frames -> original tab info
+    private final Map<JFrame, UndockedInfo> undockedFrames = new HashMap<>();
++
++    private static class UndockedInfo {
++        Component component;
++        String title;
++        int originalIndex;
++        UndockedInfo(Component c, String t, int i) {
++            component = c; title = t; originalIndex = i;
++        }
++    }
+
     public GameEditorFrame() {
         super("Eldrion Legends - 2D RPG Engine & Editor");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -63,11 +95,101 @@ public class GameEditorFrame extends JFrame {
         setLayout(new BorderLayout());
 
         setJMenuBar(buildMenuBar());
-        add(buildMainTabs(), BorderLayout.CENTER);
+        JTabbedPane mainTabs = buildMainTabs();
+        add(mainTabs, BorderLayout.CENTER);
+        installTabUndockHandler(mainTabs);
+        // wire map bindings
+        MapEditorBindings.mapCanvas = mapCanvasPanel;
+        // tile palette -> map
+        tilePalettePanel.setTileSelectedListener(id -> mapCanvasPanel.setBrushTileId(id));
+        // when a cell is selected in canvas, show inspector details
+        mapCanvasPanel.setCellSelectionListener((r,c) -> {
+            String summary = "Cell (" + r + "," + c + ")";
+            if (mapCanvasPanel.getAudioAttachment(r,c) != null) summary += "\nAudio: " + mapCanvasPanel.getAudioAttachment(r,c);
+            summary += "\nTile: " + mapCanvasPanel.getVisibleTileIdAt(r,c);
+            inspectorPanel.showCell(r,c, summary);
+            tilePalettePanel.populateTiles(GameEditorRuntimeAPI.getMapTileIds(mapCanvasPanel.mapId == null ? "world" : mapCanvasPanel.mapId));
+        });
+
         setLocationRelativeTo(null);
 
         refreshAllPanels();
     }
+
++    private void installTabUndockHandler(JTabbedPane tabs) {
++        tabs.addMouseListener(new MouseAdapter() {
++            @Override
++            public void mousePressed(MouseEvent e) {
++                if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
++                    int idx = tabs.indexAtLocation(e.getX(), e.getY());
++                    if (idx >= 0) {
++                        javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
++                        javax.swing.JMenuItem undock = new javax.swing.JMenuItem("Undock Tab");
++                        undock.addActionListener(ae -> undockTab(tabs, idx));
++                        popup.add(undock);
++                        popup.show(tabs, e.getX(), e.getY());
++                    }
++                }
++            }
++        });
++    }
++
++    private void undockTab(JTabbedPane tabs, int index) {
++        try {
++            Component comp = tabs.getComponentAt(index);
++            String title = tabs.getTitleAt(index);
++            // remove from tabs
++            tabs.remove(index);
++
++            JFrame frame = new JFrame(title);
++            frame.getContentPane().add(comp);
++            frame.pack();
++            frame.setSize(Math.max(600, comp.getWidth()), Math.max(400, comp.getHeight()));
++            frame.setLocationRelativeTo(this);
++            frame.setVisible(true);
++
++            // track for re-docking
++            undockedFrames.put(frame, new UndockedInfo(comp, title, index));
++
++            frame.addWindowListener(new WindowAdapter() {
++                @Override
++                public void windowClosing(WindowEvent e) {
++                    // re-dock when the window is closed
++                    reDockFrame(frame);
++                }
++            });
++        } catch (Exception ex) {
++            ex.printStackTrace();
++        }
++    }
++
++    private void reDockFrame(JFrame frame) {
++        UndockedInfo info = undockedFrames.remove(frame);
++        if (info == null) return;
++        try {
++            Component comp = info.component;
++            String title = info.title;
++            // add back to the main tabbed pane at end
++            java.awt.Container content = comp.getParent();
++            if (content != null) content.remove(comp);
++            JTabbedPane tabs = findMainTabbedPane();
++            if (tabs != null) {
++                tabs.addTab(title, comp);
++                tabs.setSelectedComponent(comp);
++            }
++            frame.dispose();
++        } catch (Exception ex) {
++            ex.printStackTrace();
++        }
++    }
++
++    private JTabbedPane findMainTabbedPane() {
++        // main tabbed pane is the first JTabbedPane in the content hierarchy
++        for (Component c : getContentPane().getComponents()) {
++            if (c instanceof JTabbedPane) return (JTabbedPane) c;
++        }
++        return null;
++    }
 
     public static void showEditor() {
         SwingUtilities.invokeLater(() -> {
@@ -128,6 +250,47 @@ public class GameEditorFrame extends JFrame {
         file.add(close);
         menuBar.add(file);
 
+        javax.swing.JMenu window = new javax.swing.JMenu("Window");
+        javax.swing.JMenuItem showDock = new javax.swing.JMenuItem("Show Editor Dock");
+        showDock.addActionListener(e -> EditorAPI.showDock());
+        window.add(showDock);
+
+        javax.swing.JMenuItem showMapEditor = new javax.swing.JMenuItem("Open Standalone Map Editor");
+        showMapEditor.addActionListener(e -> EditorAPI.showMapEditorStandalone());
+        window.add(showMapEditor);
+
+        javax.swing.JMenuItem dockAll = new javax.swing.JMenuItem("Dock All");
+        dockAll.addActionListener(e -> {
+            for (JFrame frame : new ArrayList<>(undockedFrames.keySet())) {
+                reDockFrame(frame);
+            }
+        });
+        window.add(dockAll);
++
++        javax.swing.JMenu layouts = new javax.swing.JMenu("Layouts");
++        javax.swing.JMenuItem saveLayout = new javax.swing.JMenuItem("Save Layout");
++        saveLayout.addActionListener(e -> {
++            try {
++                java.nio.file.Path out = java.nio.file.Path.of("build/editor_layout.json");
++                java.nio.file.Files.createDirectories(out.getParent());
++                java.util.Map<String,Object> m = new java.util.HashMap<>();
++                m.put("undockedCount", undockedFrames.size());
++                try (java.io.Writer w = java.nio.file.Files.newBufferedWriter(out)) {
++                    w.write(m.toString());
++                }
++                javax.swing.JOptionPane.showMessageDialog(this, "Saved layout to " + out.toString());
++            } catch (Exception ex) { javax.swing.JOptionPane.showMessageDialog(this, "Save layout error: " + ex.getMessage()); }
++        });
++        layouts.add(saveLayout);
++        javax.swing.JMenuItem loadLayout = new javax.swing.JMenuItem("Load Layout");
++        loadLayout.addActionListener(e -> {
++            javax.swing.JOptionPane.showMessageDialog(this, "Layout loading is a placeholder (no-op) in this build.");
++        });
++        layouts.add(loadLayout);
++        window.add(layouts);
+
+        menuBar.add(window);
+
         javax.swing.JMenu engine = new javax.swing.JMenu("Engine");
         javax.swing.JMenuItem runTick = new javax.swing.JMenuItem("Run Framework Tick");
         runTick.addActionListener(e -> {
@@ -136,30 +299,67 @@ public class GameEditorFrame extends JFrame {
         });
         engine.add(runTick);
         menuBar.add(engine);
-        return menuBar;
++        javax.swing.JMenu help = new javax.swing.JMenu("Help");
++        javax.swing.JMenuItem docs = new javax.swing.JMenuItem("Documentation");
++        docs.addActionListener(e -> {
++            EditorAPI.showDock();
++            javax.swing.JOptionPane.showMessageDialog(this, "Documentation panel is available under Window->Panels or Docs tab.");
++        });
++        help.add(docs);
++        javax.swing.JMenuItem about = new javax.swing.JMenuItem("About");
++        about.addActionListener(e -> {
++            javax.swing.JOptionPane.showMessageDialog(this, "Eldrion Legends Editor\nVersion: dev\nAuthor: Project Team");
++        });
++        help.add(about);
++        menuBar.add(help);
+         return menuBar;
     }
 
     private JTabbedPane buildMainTabs() {
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Overview", buildOverviewPanel());
-        tabs.addTab("IDE", buildIdePanel());
-        tabs.addTab("Engine", buildEnginePanel());
-        tabs.addTab("Framework", buildFrameworkPanel());
-        tabs.addTab("Systems", buildSystemsPanel());
-        tabs.addTab("Map Design", buildMapDesignPanel());
-        tabs.addTab("Pixels", pixelEditorPanel);
-        tabs.addTab("Audio", audioEditorPanel);
-        tabs.addTab("Graphics", renderGraphicsEditorPanel);
-        tabs.addTab("Story", storySystemsEditorPanel);
-        tabs.addTab("Zones", buildZonesPanel());
-        tabs.addTab("Data", buildDataPanel());
-        // Add entity editors as tabs
-        tabs.addTab("Monsters", monsterEditorPanel);
-        tabs.addTab("Items", itemEditorPanel);
-        tabs.addTab("Weapons", weaponEditorPanel);
-        tabs.addTab("Armor", armorEditorPanel);
-        return tabs;
-    }
+-        tabs.addTab("Overview", buildOverviewPanel());
+-        tabs.addTab("IDE", buildIdePanel());
+-        tabs.addTab("Engine", buildEnginePanel());
+-        tabs.addTab("Framework", buildFrameworkPanel());
+-        tabs.addTab("Systems", buildSystemsPanel());
+-        tabs.addTab("Map Design", buildMapDesignPanel());
+-        tabs.addTab("Pixels", pixelEditorPanel);
+-        tabs.addTab("Audio", audioEditorPanel);
+-        tabs.addTab("Graphics", renderGraphicsEditorPanel);
+-        tabs.addTab("Story", storySystemsEditorPanel);
+-        tabs.addTab("Zones", buildZonesPanel());
+-        tabs.addTab("Data", buildDataPanel());
++        tabs.addTab("Overview", buildOverviewPanel());
++        tabs.addTab("IDE", buildIdePanel());
++        tabs.addTab("Engine", buildEnginePanel());
++        tabs.addTab("Framework", buildFrameworkPanel());
++        tabs.addTab("Systems", buildSystemsPanel());
++        tabs.addTab("Map Design", buildMapDesignPanel());
++        tabs.addTab("Pixels", pixelEditorPanel);
++        tabs.addTab("Audio", audioEditorPanel);
++        tabs.addTab("Graphics", renderGraphicsEditorPanel);
++        tabs.addTab("Story", storySystemsEditorPanel);
++        tabs.addTab("Zones", buildZonesPanel());
++        tabs.addTab("Data", buildDataPanel());
++        // New panels (Unreal-like editor windows)
++        tabs.addTab("Content", new ContentBrowserPanel());
++        tabs.addTab("Outliner", new WorldOutlinerPanel());
++        tabs.addTab("Inspector", new InspectorPanelStub());
++        tabs.addTab("Palette", tilePalettePanel);
++        tabs.addTab("Animation", new AnimationPanel());
++        tabs.addTab("Visual Scripting", new VisualScriptingPanelStub());
++        tabs.addTab("Console", new ConsolePanel());
++        tabs.addTab("Profiler", new ProfilerPanel());
++        tabs.addTab("Audio Mixer", new AudioMixerPanel());
++        tabs.addTab("Version Control", new VersionControlPanel());
++        tabs.addTab("Docs", new DocsViewerPanel());
+         // Add entity editors as tabs
+         tabs.addTab("Monsters", monsterEditorPanel);
+         tabs.addTab("Items", itemEditorPanel);
+         tabs.addTab("Weapons", weaponEditorPanel);
+         tabs.addTab("Armor", armorEditorPanel);
+         return tabs;
+     }
 
     private JPanel buildIdePanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
@@ -385,185 +585,61 @@ public class GameEditorFrame extends JFrame {
         mapCanvasPanel.setTool((MapEditorCanvasPanel.Tool) toolSelector.getSelectedItem());
         mapCanvasPanel.setLayer((MapEditorCanvasPanel.Layer) layerSelector.getSelectedItem());
         String mapId = (String) mapSelector.getSelectedItem();
-        if (mapId != null) {
+        if (mapId != null && !mapId.isBlank()) {
             mapCanvasPanel.loadMap(mapId);
-            refreshTilePalette(mapId);
+            GameAPI.setCurrentMapId(mapId);
         }
         refreshMapDesignInfo();
     }
 
-    private static JTextArea createTextArea() {
+    private JTextArea createTextArea() {
         JTextArea area = new JTextArea();
+        area.setFont(new Font("Monospaced", Font.PLAIN, 12));
         area.setEditable(false);
-        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        area.setLineWrap(false);
         return area;
+    }
+
+    private void refreshOverviewPanel() {
+        overviewArea.setText(GameEditorRuntimeAPI.getOverviewInfo());
+    }
+
+    private void refreshEnginePanel() {
+        engineArea.setText(GameEditorRuntimeAPI.getEngineInfo());
+    }
+
+    private void refreshFrameworkPanel() {
+        frameworkArea.setText(GameEditorRuntimeAPI.getFrameworkInfo());
+    }
+
+    private void refreshFrameworkLogPanel() {
+        frameworkLogArea.setText(GameEditorRuntimeAPI.getFrameworkLog());
+    }
+
+    private void refreshZonesPanel() {
+        zonesArea.setText(GameEditorRuntimeAPI.getZonesInfo());
+    }
+
+    private void refreshDataPanel() {
+        dataArea.setText(GameEditorRuntimeAPI.getDataFilesInfo());
+    }
+
+    private void refreshSystemsPanel() {
+        systemsArea.setText(GameEditorRuntimeAPI.getSystemsInfo());
+    }
+
+    private void refreshMapDesignInfo() {
+        mapDesignInfoArea.setText(mapCanvasPanel.getMapDesignInfo());
     }
 
     private void refreshAllPanels() {
         refreshOverviewPanel();
-        refreshIdePanel();
         refreshEnginePanel();
         refreshFrameworkPanel();
         refreshFrameworkLogPanel();
-        refreshSystemsPanel();
-        refreshMapDesignPanel();
         refreshZonesPanel();
         refreshDataPanel();
-    }
-
-    private void refreshOverviewPanel() {
-        List<String> lines = new ArrayList<>();
-        lines.add("Game: " + GameAPI.getDisplayTitle());
-        lines.add("State: " + GameAPI.getCurrentState());
-        lines.add("Current Map: " + GameAPI.getCurrentMapId());
-        lines.add("");
-        lines.add("Engine Summary:");
-        lines.addAll(GameAPI.getEngineSummaryLines());
-        overviewArea.setText(String.join(System.lineSeparator(), lines));
-    }
-
-    private void refreshEnginePanel() {
-        engineArea.setText(String.join(System.lineSeparator(), GameAPI.getEngineSummaryLines()));
-    }
-
-    private void refreshIdePanel() {
-        List<String> lines = new ArrayList<>();
-        lines.add("IDE Runtime API");
-        lines.add("Map IDs loaded: " + GameEditorRuntimeAPI.listMapIds().size());
-        lines.add("Current Map: " + GameAPI.getCurrentMapId());
-        lines.add("");
-        lines.add("System Editors:");
-        lines.addAll(GameEditorRuntimeAPI.listSystemEditors());
-        ideArea.setText(String.join(System.lineSeparator(), lines));
-    }
-
-    private void refreshFrameworkPanel() {
-        frameworkArea.setText(String.join(System.lineSeparator(), GameAPI.getFrameworkRuntimeLines()));
-    }
-
-    private void refreshFrameworkLogPanel() {
-        frameworkLogArea.setText(String.join(System.lineSeparator(), GameAPI.getFrameworkLogLines(30)));
-    }
-
-    private void refreshZonesPanel() {
-        List<String> lines = new ArrayList<>();
-        lines.add("WoW Zones: " + WoWZoneSystem.zones.size());
-        lines.add("");
-        for (WoWZoneSystem.WoWZone zone : WoWZoneSystem.zones) {
-            lines.add("#" + zone.id + " " + zone.name + " [" + zone.continent + "] "
-                    + "Biome=" + zone.biomeTitle + " Tier=" + zone.worldTier
-                    + " Diff=" + zone.difficulty + " SubZones=" + zone.subZones.size());
-        }
-        zonesArea.setText(String.join(System.lineSeparator(), lines));
-    }
-
-    private void refreshDataPanel() {
-        String[] files = new String[] {
-            "docs/data/combat_framework_items.csv",
-            "docs/data/combat_framework_enemies.csv",
-            "docs/data/combat_framework_bosses.csv",
-            "docs/data/combat_framework_loot_tables.csv"
-        };
-        List<String> lines = new ArrayList<>();
-        for (String path : files) {
-            lines.add("== " + path + " ==");
-            File file = new File(path);
-            if (!file.exists()) {
-                lines.add("File not found.");
-                lines.add("");
-                continue;
-            }
-            int shown = 0;
-            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = br.readLine()) != null && shown < 8) {
-                    lines.add(line);
-                    shown++;
-                }
-            }
-            catch (Exception ex) {
-                lines.add("Read error: " + ex.getMessage());
-            }
-            lines.add("");
-        }
-        dataArea.setText(String.join(System.lineSeparator(), lines));
-    }
-
-    private void refreshSystemsPanel() {
-        List<String> lines = new ArrayList<>();
-        lines.add("RPG/MMORPG Feature Matrix");
-        lines.addAll(GameAPI.getFeatureMatrixLines());
-        lines.add("");
-        lines.add("Framework Runtime Snapshot");
-        lines.addAll(GameAPI.getFrameworkRuntimeLines());
-        systemsArea.setText(String.join(System.lineSeparator(), lines));
-    }
-
-    private void refreshMapDesignPanel() {
-        if (mapSelector == null || brushTileSpinner == null || zoomSpinner == null
-                || toolSelector == null || layerSelector == null) {
-            return;
-        }
-        List<String> mapIds = GameEditorRuntimeAPI.listMapIds();
-        String selected = (String) mapSelector.getSelectedItem();
-        mapSelector.removeAllItems();
-        for (String mapId : mapIds) {
-            mapSelector.addItem(mapId);
-        }
-        if (selected != null && mapIds.contains(selected)) {
-            mapSelector.setSelectedItem(selected);
-        }
-        else if (!mapIds.isEmpty()) {
-            mapSelector.setSelectedIndex(0);
-        }
-        mapCanvasPanel.setBrushTileId((Integer) brushTileSpinner.getValue());
-        mapCanvasPanel.setZoom((Integer) zoomSpinner.getValue());
-        String mapId = (String) mapSelector.getSelectedItem();
-        if (mapId != null) {
-            mapCanvasPanel.loadMap(mapId);
-            refreshTilePalette(mapId);
-        }
-        refreshMapDesignInfo();
-    }
-
-    private void refreshTilePalette(String mapId) {
-        if (tilePaletteSelector == null) {
-            return;
-        }
-        tilePaletteSelector.removeAllItems();
-        List<Integer> ids = GameEditorRuntimeAPI.getMapTileIds(mapId);
-        for (Integer id : ids) {
-            tilePaletteSelector.addItem(id);
-        }
-        int currentBrush = (Integer) brushTileSpinner.getValue();
-        if (ids.contains(currentBrush)) {
-            tilePaletteSelector.setSelectedItem(currentBrush);
-        }
-        else if (!ids.isEmpty()) {
-            tilePaletteSelector.setSelectedIndex(0);
-        }
-    }
-
-    private void refreshMapDesignInfo() {
-        if (mapSelector == null) {
-            return;
-        }
-        String mapId = (String) mapSelector.getSelectedItem();
-        if (mapId == null) {
-            mapDesignInfoArea.setText("No map selected.");
-            return;
-        }
-        List<String> lines = new ArrayList<>();
-        lines.add("Map design uses the same tile graphics as the game.");
-        lines.add("Tools: Paint, Erase, Fill, Rect, Eyedropper.");
-        lines.add("Layers: Base, Decoration, Collision.");
-        lines.add("Map: " + mapId);
-        lines.add("Tool: " + (toolSelector == null ? "Paint" : toolSelector.getSelectedItem()));
-        lines.add("Layer: " + (layerSelector == null ? "Base" : layerSelector.getSelectedItem()));
-        lines.add("Brush Tile ID: " + (brushTileSpinner == null ? "1" : brushTileSpinner.getValue()));
-        lines.addAll(mapCanvasPanel.getEditorSummaryLines());
-        lines.addAll(GameEditorRuntimeAPI.mapSummary(mapId));
-        mapDesignInfoArea.setText(String.join(System.lineSeparator(), lines));
-    }
-}
+        refreshSystemsPanel();
+-        mapCanvasPanel.refresh();
++        mapCanvasPanel.repaint();
+     }
+ }
