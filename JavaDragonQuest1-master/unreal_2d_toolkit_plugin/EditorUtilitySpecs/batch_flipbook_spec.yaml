@@ -1,0 +1,18 @@
+# Editor Utility Widget spec: Batch Create Flipbooks from Selected Sprites
+# This is a blueprint spec to guide creation inside the Editor (UMG + Editor Utility Blueprint)
+
+name: BatchFlipbookCreator
+category: 2D Toolkit
+widgets:
+  - type: Button
+    label: Create Flipbooks
+    tooltip: Create flipbooks from currently selected sprites
+    action: call_python: Python.batch_create_flipbooks.create_flipbooks_from_selected_sprites(0.08)
+
+  - type: FloatField
+    label: Frame Time
+    default: 0.08
+    binding: frame_time
+
+notes: |
+  To implement: create an Editor Utility Widget in Unreal Editor, add a button and a float input. On button press call the Python function above or use Editor Utility Blueprint nodes to loop selected assets and create flipbooks.

@@ -1,23 +1,23 @@
 package com.javadragonquest.editor.model;
 
-import com.google.gson.Gson;
-
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class LevelIO {
-    private static final Gson gson = new Gson();
 
     public static void save(SceneModel model, File file) throws Exception {
-        try (FileWriter fw = new FileWriter(file)) {
-            gson.toJson(model, fw);
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(model);
         }
     }
 
     public static SceneModel load(File file) throws Exception {
-        try (FileReader fr = new FileReader(file)) {
-            return gson.fromJson(fr, SceneModel.class);
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            Object o = ois.readObject();
+            return (SceneModel) o;
         }
     }
 }

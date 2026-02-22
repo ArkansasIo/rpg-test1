@@ -1,0 +1,21 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Unreal 2D Toolkit Plugin",
+  "Description": "A plugin skeleton providing a 2D Toolkit: sprite slicing, flipbook generation, tile palette, and editor utilities for 2D game workflows.",
+  "Category": "2D",
+  "CreatedBy": "AutomatedAssistant",
+  "CreatedByURL": "",
+  "DocsURL": "",
+  "MarketplaceURL": "",
+  "SupportURL": "",
+  "EnabledByDefault": true,
+  "Modules": [
+    {
+      "Name": "Unreal2DToolkit",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

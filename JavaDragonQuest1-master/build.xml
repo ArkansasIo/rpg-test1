@@ -10,6 +10,44 @@
 <project name="JavaDragonQuest1" default="default" basedir=".">
     <description>Builds, tests, and runs the project JavaDragonQuest1.</description>
     <import file="nbproject/build-impl.xml"/>
+
+    <!-- read environment variables into properties -->
+    <property environment="env"/>
+
+    <!-- set properties if editor classes exist -->
+    <available file="editor-java/build/classes" type="dir" property="editor.classes.present"/>
+
+    <!-- Optional: compile editor-java sources if JAVAFX_LIB environment variable is set -->
+    <target name="compile-editor" if="env.JAVAFX_LIB">
+        <echo message="Compiling editor-java sources using JavaFX libraries from ${env.JAVAFX_LIB}"/>
+        <mkdir dir="editor-java/build/classes"/>
+        <path id="javafx.path">
+            <fileset dir="${env.JAVAFX_LIB}">
+                <include name="*.jar"/>
+            </fileset>
+        </path>
+        <javac srcdir="editor-java/src/main/java" destdir="editor-java/build/classes" includeantruntime="false" debug="true">
+            <classpath>
+                <path refid="javafx.path"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <!-- Ensure compile-editor runs before main compilation when JAVAFX_LIB is present -->
+    <target name="-pre-compile" depends="compile-editor"/>
+
+    <!-- copy any precompiled editor-java classes into main build classes after compile -->
+    <target name="copy-editor-classes" if="editor.classes.present">
+        <echo message="Found editor-java build/classes; copying to project build/classes"/>
+        <copy todir="${build.classes.dir}" verbose="true">
+            <fileset dir="editor-java/build/classes">
+                <include name="**/*.class"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="-post-compile" depends="copy-editor-classes"/>
+
         <!-- Custom targets to package assets into JAR -->
         <target name="-pre-jar">
             <copy todir="${build.classes.dir}/res">

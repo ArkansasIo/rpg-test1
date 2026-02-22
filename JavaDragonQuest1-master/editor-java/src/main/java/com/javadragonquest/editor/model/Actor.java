@@ -1,6 +1,9 @@
 package com.javadragonquest.editor.model;
 
-public class Actor {
+import java.io.Serializable;
+
+public class Actor implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String id;
     private String name;
     private float x;
@@ -77,5 +80,10 @@ public class Actor {
 
     public void setAssetPath(String assetPath) {
         this.assetPath = assetPath;
+    }
+
+    @Override
+    public String toString() {
+        return name == null ? "Actor" : name;
     }
 }

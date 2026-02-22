@@ -1,0 +1,11 @@
+{
+  "menu": "LevelEditor.MainMenu.Tools",
+  "section": "Unreal2DToolkit",
+  "items": [
+    { "id": "2dToolkit.open", "label": "Open 2D Toolkit", "tooltip": "Open the 2D Toolkit dashboard" },
+    { "id": "2dToolkit.spriteSlicer", "label": "Sprite Slicer", "tooltip": "Open the sprite slicer utility" },
+    { "id": "2dToolkit.flipbookGenerator", "label": "Flipbook Generator", "tooltip": "Create flipbooks from selected sprites" },
+    { "id": "2dToolkit.tilePalette", "label": "Tile Palette", "tooltip": "Open Tile Palette editor" },
+    { "id": "2dToolkit.atlasPacker", "label": "Atlas Packer", "tooltip": "Pack selected sprites into an atlas" }
+  ]
+}
