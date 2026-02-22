@@ -1668,13 +1668,14 @@ public class Game {
             String[] settingsOptions = new String[] {
                 "Audio / Speed",
                 "Display",
+                "Engine Diagnostics",
                 "Keyboard Keybinds",
                 "Mouse Controls",
                 "UI / Story",
                 "Reset Default Keybinds",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(8, 8, 24, 9, -1, settingsOptions);
+            int option = Dialog.showOptionsMenu(7, 8, 27, 10, -1, settingsOptions);
             switch (option) {
                 case 0:
                     showOptionsMenu();
@@ -1683,23 +1684,38 @@ public class Game {
                     changeScreenResolution();
                     break;
                 case 2:
-                    remapControlsMenu();
+                    showEngineDiagnosticsPanel();
                     break;
                 case 3:
-                    showMouseControlsMenu();
+                    remapControlsMenu();
                     break;
                 case 4:
-                    showUiStoryMenu();
+                    showMouseControlsMenu();
                     break;
                 case 5:
-                    resetDefaultKeybinds();
+                    showUiStoryMenu();
                     break;
                 case 6:
+                    resetDefaultKeybinds();
+                    break;
+                case 7:
                 case -1:
                     exit = true;
                     break;
             }
         }
+    }
+
+    private static void showEngineDiagnosticsPanel() {
+        List<String> lines = new ArrayList<>();
+        lines.addAll(GameEngineService.buildEngineSummaryLines());
+        lines.add("");
+        lines.add("Framework Tick:");
+        lines.addAll(GameEngineService.buildFrameworkRuntimeLines());
+        lines.add("");
+        lines.add("Framework Log:");
+        lines.addAll(GameEngineService.buildFrameworkLogLines(5));
+        showSimplePanel("ENGINE DIAGNOSTICS", lines);
     }
 
     private static void showMouseControlsMenu() {

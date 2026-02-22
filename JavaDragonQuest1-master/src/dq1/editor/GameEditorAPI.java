@@ -36,4 +36,20 @@ public class GameEditorAPI {
     public List<Boss> getBosses() {
         return GameAPI.getBosses();
     }
+
+    public List<String> getEngineSummaryLines() {
+        return GameAPI.getEngineSummaryLines();
+    }
+
+    public List<String> getFrameworkRuntimeLines() {
+        return GameAPI.getFrameworkRuntimeLines();
+    }
+
+    public List<String> getFrameworkLogLines(int max) {
+        return GameAPI.getFrameworkLogLines(max);
+    }
+
+    public void applyDisplayPreset(String preset) {
+        GameAPI.applyDisplayPreset(preset);
+    }
 }

@@ -32,6 +32,22 @@ public final class GameAPI {
         return mapId == null ? "" : mapId.toString();
     }
 
+    public static List<String> getEngineSummaryLines() {
+        return GameEngineService.buildEngineSummaryLines();
+    }
+
+    public static List<String> getFrameworkRuntimeLines() {
+        return GameEngineService.buildFrameworkRuntimeLines();
+    }
+
+    public static List<String> getFrameworkLogLines(int max) {
+        return GameEngineService.buildFrameworkLogLines(max);
+    }
+
+    public static void applyDisplayPreset(String preset) {
+        GameEngineService.applyDisplayPreset(preset);
+    }
+
     public static void launch() throws Exception {
         Game.start();
     }
