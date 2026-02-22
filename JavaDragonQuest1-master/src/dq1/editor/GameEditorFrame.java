@@ -52,6 +52,9 @@ public class GameEditorFrame extends JFrame {
     private final ItemEditorPanel itemEditorPanel = new ItemEditorPanel();
     private final WeaponEditorPanel weaponEditorPanel = new WeaponEditorPanel();
     private final ArmorEditorPanel armorEditorPanel = new ArmorEditorPanel();
+    private final AudioEditorPanel audioEditorPanel = new AudioEditorPanel();
+    private final RenderGraphicsEditorPanel renderGraphicsEditorPanel = new RenderGraphicsEditorPanel();
+    private final StorySystemsEditorPanel storySystemsEditorPanel = new StorySystemsEditorPanel();
 
     public GameEditorFrame() {
         super("Dragon Warrior Engine Editor");
@@ -102,6 +105,9 @@ public class GameEditorFrame extends JFrame {
         tabs.addTab("Systems", buildSystemsPanel());
         tabs.addTab("Map Design", buildMapDesignPanel());
         tabs.addTab("Pixels", pixelEditorPanel);
+        tabs.addTab("Audio", audioEditorPanel);
+        tabs.addTab("Graphics", renderGraphicsEditorPanel);
+        tabs.addTab("Story", storySystemsEditorPanel);
         tabs.addTab("Zones", buildZonesPanel());
         tabs.addTab("Data", buildDataPanel());
         // Add entity editors as tabs

@@ -18,6 +18,8 @@ import mmorpg.game.FeatureRegistry;
  */
 public final class GameAPI {
 
+    private static final StorySystem STORY_EDITOR_MODEL = new StorySystem();
+
     private GameAPI() { }
 
     public static String getGameTitle() {
@@ -286,10 +288,9 @@ public final class GameAPI {
     }
 
     public static List<StorySystem.Act> getActs() {
-        StorySystem story = new StorySystem();
         List<StorySystem.Act> result = new ArrayList<>();
         for (int i = 1; i <= StorySystem.ACT_COUNT; i++) {
-            StorySystem.Act act = story.getAct(i);
+            StorySystem.Act act = STORY_EDITOR_MODEL.getAct(i);
             if (act != null) {
                 result.add(act);
             }
@@ -298,13 +299,118 @@ public final class GameAPI {
     }
 
     public static void addQuest(int actNum, int chapterNum, String name, String desc) {
-        StorySystem story = new StorySystem();
-        StorySystem.Act act = story.getAct(actNum);
+        StorySystem.Act act = STORY_EDITOR_MODEL.getAct(actNum);
         if (act != null) {
             StorySystem.Chapter chapter = act.getChapter(chapterNum);
             if (chapter != null) {
                 chapter.addQuest(name, desc);
             }
+        }
+    }
+
+    public static void addSideQuest(int actNum, int chapterNum, String name, String desc) {
+        StorySystem.Act act = STORY_EDITOR_MODEL.getAct(actNum);
+        if (act != null) {
+            StorySystem.Chapter chapter = act.getChapter(chapterNum);
+            if (chapter != null) {
+                chapter.addSideQuest(name, desc);
+            }
+        }
+    }
+
+    public static List<String> getStorySummaryLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Acts: " + StorySystem.ACT_COUNT + " | Chapters/Act: " + StorySystem.CHAPTERS_PER_ACT);
+        for (int i = 1; i <= StorySystem.ACT_COUNT; i++) {
+            StorySystem.Act act = STORY_EDITOR_MODEL.getAct(i);
+            int mainCount = 0;
+            int sideCount = 0;
+            if (act != null) {
+                for (StorySystem.Chapter chapter : act.chapters) {
+                    mainCount += chapter.quests.size();
+                    sideCount += chapter.sideQuests.size();
+                }
+            }
+            lines.add("Act " + i + " -> Main Quests: " + mainCount + " | Side Quests: " + sideCount);
+        }
+        return lines;
+    }
+
+    public static List<String> getAudioTrackIds() {
+        List<String> ids = new ArrayList<>();
+        try {
+            File dir = new File("assets/res/audio");
+            if (!dir.exists()) {
+                dir = new File("JavaDragonQuest1-master/assets/res/audio");
+            }
+            File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mid"));
+            if (files != null) {
+                for (File file : files) {
+                    String n = file.getName();
+                    int i = n.lastIndexOf('.');
+                    ids.add(i > 0 ? n.substring(0, i) : n);
+                }
+            }
+            Collections.sort(ids);
+        }
+        catch (Exception ignored) {
+        }
+        return ids;
+    }
+
+    public static String setAudioVolumes(int music, int sound) {
+        try {
+            int mv = Math.max(0, Math.min(9, music));
+            int sv = Math.max(0, Math.min(9, sound));
+            Audio.setMusicVolume(mv);
+            Audio.setSoundVolume(sv);
+            return "Applied volumes -> music=" + mv + ", sound=" + sv;
+        }
+        catch (Exception e) {
+            return "Audio volume error: " + e.getMessage();
+        }
+    }
+
+    public static String previewMusic(String musicId) {
+        try {
+            if (musicId == null || musicId.isBlank()) {
+                return "Music id is empty.";
+            }
+            Audio.playMusic(musicId.trim());
+            return "Playing music: " + musicId.trim();
+        }
+        catch (Exception e) {
+            return "Play music error: " + e.getMessage();
+        }
+    }
+
+    public static String pauseMusic() {
+        try {
+            Audio.pauseMusic();
+            return "Music paused.";
+        }
+        catch (Exception e) {
+            return "Pause music error: " + e.getMessage();
+        }
+    }
+
+    public static String stopMusic() {
+        try {
+            Audio.stopMusic();
+            return "Music stopped.";
+        }
+        catch (Exception e) {
+            return "Stop music error: " + e.getMessage();
+        }
+    }
+
+    public static String previewSoundEffect(int soundId) {
+        try {
+            Audio.playSound(soundId);
+            return "Played sound effect id: " + soundId;
+        }
+        catch (Exception e) {
+            return "Play SFX error: " + e.getMessage();
         }
     }
 
