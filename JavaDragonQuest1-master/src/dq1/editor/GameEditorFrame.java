@@ -70,7 +70,50 @@ public class GameEditorFrame extends JFrame {
     }
 
     public static void showEditor() {
-        SwingUtilities.invokeLater(() -> new GameEditorFrame().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            GameEditorFrame editor = new GameEditorFrame();
+            try {
+                javax.swing.JFrame gameFrame = null;
+                try {
+                    // Use Game.getGameFrame() if available at runtime
+                    Class<?> gameCls = Class.forName("dq1.core.Game");
+                    java.lang.reflect.Method m = gameCls.getMethod("getGameFrame");
+                    Object gf = m.invoke(null);
+                    if (gf instanceof javax.swing.JFrame) {
+                        gameFrame = (javax.swing.JFrame) gf;
+                    }
+                } catch (Throwable t) {
+                    // ignore - game frame may not be available
+                }
+
+                if (gameFrame != null && gameFrame.isVisible()) {
+                    // Position editor to the right of the game window when possible
+                    java.awt.Rectangle gameBounds = gameFrame.getBounds();
+                    java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+
+                    int x = gameBounds.x + gameBounds.width + 8; // small gap
+                    int y = gameBounds.y;
+
+                    // Ensure editor fits horizontally; if not, place to left of game
+                    if (x + editor.getWidth() > screenSize.width) {
+                        x = gameBounds.x - editor.getWidth() - 8;
+                    }
+                    // Clamp y into screen
+                    if (y + editor.getHeight() > screenSize.height) {
+                        y = Math.max(0, screenSize.height - editor.getHeight());
+                    }
+
+                    editor.setLocation(x, y);
+                } else {
+                    // Fallback: center on screen
+                    editor.setLocationRelativeTo(null);
+                }
+            } catch (Exception ex) {
+                // If anything goes wrong, just center the window
+                editor.setLocationRelativeTo(null);
+            }
+            editor.setVisible(true);
+        });
     }
 
     private javax.swing.JMenuBar buildMenuBar() {

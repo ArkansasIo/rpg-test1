@@ -115,6 +115,14 @@ public class Game {
         return currentMap;
     }
 
+    /**
+     * Return the main game JFrame so tools (like the in-game editor) can
+     * position auxiliary windows relative to the game window.
+     */
+    public static javax.swing.JFrame getGameFrame() {
+        return gameFrame;
+    }
+
     private static boolean isSkipRequested() {
         return Input.isKeyJustPressed(KEY_CONFIRM)
                 || Input.isKeyJustPressed(KEY_CANCEL);
@@ -2123,7 +2131,7 @@ public class Game {
         Dialog.printText(3, 6, 11, "Cancel : " + keyName(Settings.KEY_CANCEL));
         Dialog.printText(3, 6, 13, "Mouse L: Confirm");
         Dialog.printText(3, 6, 14, "Mouse R: Cancel");
-        Dialog.printText(3, 6, 16, "Press confirm/cancel to close");
+        Dialog.printText(3, 6, 16, "Press confirm/cancel to skip");
         waitForFireOrEscKey();
         Dialog.hideOptionsMenu(3, 4, 4, 28, 14, "");
     }
@@ -2760,11 +2768,11 @@ public class Game {
             options[i] = String.format("%02d %s", i + 1, name);
         }
         options[maxOptions] = "Back";
-        int choice = Dialog.showOptionsMenu(8, 8, 31, maxOptions + 3, -1, options);
-        if (choice < 0 || choice >= maxOptions) {
+        int selection = Dialog.showOptionsMenu(8, 8, 31, maxOptions + 3, -1, options);
+        if (selection < 0 || selection >= maxOptions) {
             return -1;
         }
-        return choice;
+        return selection;
     }
 
     private static void showRpgRuntimeActions() {
@@ -3546,8 +3554,3 @@ public class Game {
         Dialog.hideOptionsMenu(3, 4, 4, 31, 16, "");
     }
 }
-
-
-
-
-
