@@ -14,6 +14,7 @@ import java.awt.Rectangle;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -73,6 +74,9 @@ public class MapEditorCanvasPanel extends JPanel {
 
     // audio attachments per cell (key: ((long)row<<32)|col)
     private Map<Long, String> audioAttachments = new java.util.HashMap<>();
+
+    // cell selection listener (row,col)
+    private java.util.function.BiConsumer<Integer,Integer> cellSelectionListener;
 
     public MapEditorCanvasPanel() {
         setBackground(new Color(24, 24, 26));
@@ -140,6 +144,11 @@ public class MapEditorCanvasPanel extends JPanel {
                 }
             }
         }, true);
+    }
+
+    // allow external code to listen for cell selections
+    public void setCellSelectionListener(java.util.function.BiConsumer<Integer,Integer> listener) {
+        this.cellSelectionListener = listener;
     }
 
     public void setTilePickListener(java.util.function.IntConsumer tilePickListener) {
@@ -371,6 +380,11 @@ public class MapEditorCanvasPanel extends JPanel {
         beginStroke();
         paintSingle(row, col);
         repaint();
+
+        // fire cell selection listener on right-click
+        if (e.getButton() == MouseEvent.BUTTON3 && cellSelectionListener != null) {
+            cellSelectionListener.accept(row, col);
+        }
     }
 
     private void handleDrag(java.awt.event.MouseEvent e) {
