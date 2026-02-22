@@ -1,0 +1,21 @@
+# Ignore build output
+/build/
+/build/*
+
+# Ignore compiled classes in build directories
+build/classes/
+
+# Common IDE/editor files
+*.iml
+/.idea/
+/.vscode/
+
+# Mac/Windows temporary files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Generated files
+target/
