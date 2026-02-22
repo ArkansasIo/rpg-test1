@@ -36,7 +36,7 @@ import javax.swing.JPanel;
 public class MapEditorCanvasPanel extends JPanel {
 
     public enum Tool {
-        Paint, Erase, Fill, Rect, Eyedropper
+        Paint, Erase, Fill, Rect, Eyedropper, Select, Stamp
     }
 
     public enum Layer {
@@ -81,6 +81,15 @@ public class MapEditorCanvasPanel extends JPanel {
 
     // cell selection listener (row,col)
     private java.util.function.BiConsumer<Integer,Integer> cellSelectionListener;
+
+    // New editor features
+    private int brushSize = 1; // square brush
+    private Rectangle selectionRect = null; // current selection rectangle in cells
+    private int[][] clipboardDeco = null;
+    private boolean[][] clipboardCollision = null;
+    private int clipboardRows = 0;
+    private int clipboardCols = 0;
+    private boolean hasClipboard = false;
 
     public MapEditorCanvasPanel() {
         setBackground(new Color(24, 24, 26));
@@ -159,11 +168,42 @@ public class MapEditorCanvasPanel extends JPanel {
         this.tilePickListener = tilePickListener;
     }
 
+    // Return a short human-readable summary for the Map Design panel
+    public String getMapDesignInfo() {
+        StringBuilder sb = new StringBuilder();
+        if (map == null) {
+            sb.append("Map: (none)");
+            return sb.toString();
+        }
+        sb.append("Map ID: ").append(map.getId()).append("\n");
+        sb.append("Size: ").append(map.getCols()).append(" x ").append(map.getRows()).append("\n");
+        sb.append("Brush Tile: ").append(brushTileId).append(" | Zoom: ").append(zoom).append("\n");
+        sb.append("Undo: ").append(undo.size()).append(" | Redo: ").append(redo.size()).append("\n");
+        if (hoverRow >= 0 && hoverCol >= 0) {
+            sb.append("Hover: row=").append(hoverRow).append(", col=").append(hoverCol).append("\n");
+            sb.append("Visible Tile: ").append(getVisibleTileId(hoverRow, hoverCol));
+        }
+        return sb.toString();
+    }
+
     // Public wrappers for external bindings (used by Inspector and other panels)
     public void beginStrokePublic() { beginStroke(); }
     public void commitStrokePublic() { commitStroke(); }
     public void changeCellPublic(int row, int col, int newValue) { changeCell(row, col, newValue); }
     public int getVisibleTileIdAt(int row, int col) { return getVisibleTileId(row, col); }
+
+    // New public API
+    public void setBrushSize(int size) { brushSize = Math.max(1, size); }
+    public int getBrushSize() { return brushSize; }
+
+    public boolean hasClipboard() { return hasClipboard; }
+
+    public void copySelectionPublic() { copySelection(); }
+    public void pasteClipboardPublic() { pasteClipboardAtHover(); }
+    public void rotateClipboardCWPublic() { rotateClipboardCW(); }
+    public void flipClipboardHorizontalPublic() { flipClipboardHorizontal(); }
+
+    public int[] getHoverCell() { return (hoverRow >= 0 && hoverCol >= 0) ? new int[]{hoverRow, hoverCol} : null; }
 
     public void setBrushTileId(int value) {
         brushTileId = Math.max(0, value);
@@ -199,6 +239,8 @@ public class MapEditorCanvasPanel extends JPanel {
             ensureEditorLayers();
             undo.clear();
             redo.clear();
+            selectionRect = null;
+            hasClipboard = false;
         }
         catch (Exception ignored) {
             map = null;
@@ -387,6 +429,20 @@ public class MapEditorCanvasPanel extends JPanel {
             rectStart = new Point(col, row);
             return;
         }
+        if (tool == Tool.Select) {
+            rectStart = new Point(col, row);
+            return;
+        }
+        if (tool == Tool.Stamp) {
+            // Stamp paints the clipboard at clicked location
+            if (hasClipboard) {
+                beginStroke();
+                pasteClipboardAt(row, col);
+                commitStroke();
+                repaint();
+            }
+            return;
+        }
         beginStroke();
         paintSingle(row, col);
         repaint();
@@ -425,25 +481,46 @@ public class MapEditorCanvasPanel extends JPanel {
             paintSingle(cell[0], cell[1]);
             repaint();
         }
+        if (tool == Tool.Select && rectStart != null) {
+            int startCol = rectStart.x;
+            int startRow = rectStart.y;
+            int curCol = cell[1];
+            int curRow = cell[0];
+            int left = Math.min(startCol, curCol);
+            int right = Math.max(startCol, curCol);
+            int top = Math.min(startRow, curRow);
+            int bottom = Math.max(startRow, curRow);
+            selectionRect = new Rectangle(left, top, right - left + 1, bottom - top + 1);
+            repaint();
+        }
     }
 
     private void handleRelease(java.awt.event.MouseEvent e) {
-        if (tool == Tool.Rect && rectStart != null) {
+        if ((tool == Tool.Rect || tool == Tool.Select) && rectStart != null) {
             int[] cell = mouseToCell(e.getX(), e.getY());
             if (cell != null) {
                 int startRow = Math.min(rectStart.y, cell[0]);
                 int endRow = Math.max(rectStart.y, cell[0]);
                 int startCol = Math.min(rectStart.x, cell[1]);
                 int endCol = Math.max(rectStart.x, cell[1]);
-                beginStroke();
-                int replacement = getReplacementValue();
-                for (int row = startRow; row <= endRow; row++) {
-                    for (int col = startCol; col <= endCol; col++) {
-                        changeCell(row, col, replacement);
+                if (tool == Tool.Rect) {
+                    beginStroke();
+                    int replacement = getReplacementValue();
+                    for (int row = startRow; row <= endRow; row++) {
+                        for (int col = startCol; col <= endCol; col++) {
+                            changeCell(row, col, replacement);
+                        }
                     }
+                    commitStroke();
+                    repaint();
                 }
-                commitStroke();
-                repaint();
+                else if (tool == Tool.Select) {
+                    // capture selection into selectionRect
+                    selectionRect = new Rectangle(startCol, startRow, endCol - startCol + 1, endRow - startRow + 1);
+                    // create clipboard immediately on selection
+                    copySelection();
+                    repaint();
+                }
             }
             rectStart = null;
             return;
@@ -480,7 +557,17 @@ public class MapEditorCanvasPanel extends JPanel {
     }
 
     private void paintSingle(int row, int col) {
-        changeCell(row, col, getReplacementValue());
+        // apply square brush centered at (row,col)
+        int half = brushSize / 2;
+        beginStroke();
+        for (int r = row - half; r <= row + half; r++) {
+            for (int c = col - half; c <= col + half; c++) {
+                if (r >= 0 && c >= 0 && map != null && r < map.getRows() && c < map.getCols()) {
+                    changeCell(r, c, getReplacementValue());
+                }
+            }
+        }
+        // NOTE: commitStroke() will be called on release; don't commit here for continuous strokes
     }
 
     private int getReplacementValue() {
@@ -560,6 +647,87 @@ public class MapEditorCanvasPanel extends JPanel {
             }
             else {
                 existing.newValue = newValue;
+            }
+        }
+    }
+
+    private void pasteClipboardAtHover() {
+        int[] h = getHoverCell();
+        if (h == null) return;
+        int row = h[0];
+        int col = h[1];
+        beginStroke();
+        pasteClipboardAt(row, col);
+        commitStroke();
+        repaint();
+    }
+
+    private void pasteClipboardAt(int destRow, int destCol) {
+        if (!hasClipboard || clipboardDeco == null) return;
+        for (int r = 0; r < clipboardRows; r++) {
+            for (int c = 0; c < clipboardCols; c++) {
+                int tr = destRow + r;
+                int tc = destCol + c;
+                if (tr >= 0 && tc >= 0 && tr < map.getRows() && tc < map.getCols()) {
+                    if (layer == Layer.Decoration) {
+                        changeCell(tr, tc, clipboardDeco[r][c]);
+                    } else if (layer == Layer.Collision) {
+                        changeCell(tr, tc, clipboardCollision[r][c] ? 1 : 0);
+                    } else if (layer == Layer.Base) {
+                        // pasting base tiles isn't preserved in this clipboard; skip
+                    }
+                }
+            }
+        }
+    }
+
+    private void copySelection() {
+        if (selectionRect == null || map == null) return;
+        int rows = selectionRect.height;
+        int cols = selectionRect.width;
+        clipboardRows = rows;
+        clipboardCols = cols;
+        clipboardDeco = new int[rows][cols];
+        clipboardCollision = new boolean[rows][cols];
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int mr = selectionRect.y + r;
+                int mc = selectionRect.x + c;
+                clipboardDeco[r][c] = decorationLayer[mr][mc];
+                clipboardCollision[r][c] = collisionLayer[mr][mc];
+            }
+        }
+        hasClipboard = true;
+    }
+
+    private void rotateClipboardCW() {
+        if (!hasClipboard || clipboardDeco == null) return;
+        int r = clipboardRows;
+        int c = clipboardCols;
+        int[][] newDeco = new int[c][r];
+        boolean[][] newCol = new boolean[c][r];
+        for (int i = 0; i < r; i++) {
+            for (int j = 0; j < c; j++) {
+                newDeco[j][r - 1 - i] = clipboardDeco[i][j];
+                newCol[j][r - 1 - i] = clipboardCollision[i][j];
+            }
+        }
+        clipboardDeco = newDeco;
+        clipboardCollision = newCol;
+        int tmp = clipboardRows; clipboardRows = clipboardCols; clipboardCols = tmp;
+    }
+
+    private void flipClipboardHorizontal() {
+        if (!hasClipboard || clipboardDeco == null) return;
+        for (int i = 0; i < clipboardRows; i++) {
+            for (int j = 0; j < clipboardCols / 2; j++) {
+                int opp = clipboardCols - 1 - j;
+                int t = clipboardDeco[i][j];
+                clipboardDeco[i][j] = clipboardDeco[i][opp];
+                clipboardDeco[i][opp] = t;
+                boolean tb = clipboardCollision[i][j];
+                clipboardCollision[i][j] = clipboardCollision[i][opp];
+                clipboardCollision[i][opp] = tb;
             }
         }
     }
@@ -652,6 +820,19 @@ public class MapEditorCanvasPanel extends JPanel {
                 }
             }
         }
+
+        // draw selection rectangle if present
+        if (selectionRect != null) {
+            int sx = selectionRect.x * tileSize;
+            int sy = selectionRect.y * tileSize;
+            int sw = selectionRect.width * tileSize;
+            int sh = selectionRect.height * tileSize;
+            g2.setColor(new Color(0, 160, 255, 80));
+            g2.fillRect(sx, sy, sw, sh);
+            g2.setColor(new Color(0, 200, 255, 200));
+            g2.drawRect(sx, sy, sw, sh);
+        }
+
         if (tool == Tool.Rect && rectStart != null && hoverRow >= 0 && hoverCol >= 0) {
             int startCol = Math.min(rectStart.x, hoverCol);
             int endCol = Math.max(rectStart.x, hoverCol);

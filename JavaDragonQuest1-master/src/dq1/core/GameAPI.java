@@ -198,6 +198,12 @@ public final class GameAPI {
         }
     }
 
+    public static void setCurrentMapId(String mapId) {
+        try {
+            dq1.core.Script.setGlobalValue("$$current_map_id", mapId);
+        } catch (Exception ignored) { }
+    }
+
     public static List<String> listSystemEditorModules() {
         return List.of(
                 "Map Editor",

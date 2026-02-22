@@ -296,10 +296,6 @@ public class GraphModel {
     private static String escape(String s) { return s.replace(" ", "_S_"); }
     private static String unescape(String s) { return s.replace("_S_", " "); }
 
-    public Node findNodeAt(int x, int y) { return findNodeAt(new java.awt.Point(x,y)); }
-
-    public Node findNodeAt(java.awt.Point p) { return findNodeAt(p.x, p.y); }
-
     public List<String> simpleRunOrder() {
         // simple topological-ish traversal: start from nodes with no incoming
         Map<String, Integer> indeg = new HashMap<>();

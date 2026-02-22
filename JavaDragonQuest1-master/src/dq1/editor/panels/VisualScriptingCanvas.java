@@ -10,8 +10,8 @@ public class VisualScriptingCanvas extends JPanel {
     private final GraphModel model = new GraphModel();
     private final GraphHistory history = new GraphHistory();
     private Point dragOffset = null;
-    private Node selectedNode = null;
-    private Node linkStartNode = null;
+    private GraphModel.Node selectedNode = null;
+    private GraphModel.Node linkStartNode = null;
 
     public VisualScriptingCanvas() {
         setBackground(Color.WHITE);
@@ -22,7 +22,7 @@ public class VisualScriptingCanvas extends JPanel {
             private int origX, origY;
             @Override
             public void mousePressed(MouseEvent e) {
-                Node n = model.findNodeAt(e.getPoint());
+                GraphModel.Node n = model.findNodeAt(e.getPoint());
                 if (n != null) {
                     selectedNode = n;
                     dragOffset = new Point(e.getX() - n.x, e.getY() - n.y);
@@ -52,7 +52,7 @@ public class VisualScriptingCanvas extends JPanel {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (linkStartNode != null && SwingUtilities.isRightMouseButton(e)) {
-                    Node target = model.findNodeAt(e.getPoint());
+                    GraphModel.Node target = model.findNodeAt(e.getPoint());
                     if (target != null && target != linkStartNode) {
                         AddLinkCommand cmd = new AddLinkCommand(model, linkStartNode.id, target.id);
                         history.execute(cmd);

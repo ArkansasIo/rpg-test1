@@ -44,6 +44,7 @@ import dq1.editor.panels.ConsolePanel;
 import dq1.editor.panels.ProfilerPanel;
 import dq1.editor.panels.AudioMixerPanel;
 import dq1.editor.panels.VersionControlPanel;
+import dq1.editor.panels.MapEditorBindings;
 
 /**
  * Updated editor shell for game, engine, and framework tooling.
@@ -82,15 +83,15 @@ public class GameEditorFrame extends JFrame {
 
     // Track undocked frames -> original tab info
     private final Map<JFrame, UndockedInfo> undockedFrames = new HashMap<>();
-+
-+    private static class UndockedInfo {
-+        Component component;
-+        String title;
-+        int originalIndex;
-+        UndockedInfo(Component c, String t, int i) {
-+            component = c; title = t; originalIndex = i;
-+        }
-+    }
+
+    private static class UndockedInfo {
+        Component component;
+        String title;
+        int originalIndex;
+        UndockedInfo(Component c, String t, int i) {
+            component = c; title = t; originalIndex = i;
+        }
+    }
 
     public GameEditorFrame() {
         super("Eldrion Legends - 2D RPG Engine & Editor");
@@ -99,8 +100,8 @@ public class GameEditorFrame extends JFrame {
         setLayout(new BorderLayout());
 
         setJMenuBar(buildMenuBar());
-+        // Add Unreal-style top toolbar (below the menu bar)
-+        add(buildToolBar(), BorderLayout.NORTH);
+        // Add Unreal-style top toolbar (below the menu bar)
+        add(buildToolBar(), BorderLayout.NORTH);
         JTabbedPane mainTabs = buildMainTabs();
         add(mainTabs, BorderLayout.CENTER);
         installTabUndockHandler(mainTabs);
@@ -114,7 +115,7 @@ public class GameEditorFrame extends JFrame {
             if (mapCanvasPanel.getAudioAttachment(r,c) != null) summary += "\nAudio: " + mapCanvasPanel.getAudioAttachment(r,c);
             summary += "\nTile: " + mapCanvasPanel.getVisibleTileIdAt(r,c);
             inspectorPanel.showCell(r,c, summary);
-            tilePalettePanel.populateTiles(GameEditorRuntimeAPI.getMapTileIds(mapCanvasPanel.mapId == null ? "world" : mapCanvasPanel.mapId));
+            tilePalettePanel.populateTiles(GameEditorRuntimeAPI.getMapTileIds(mapCanvasPanel.getMapId() == null ? "world" : mapCanvasPanel.getMapId()));
         });
 
         setLocationRelativeTo(null);
@@ -122,80 +123,80 @@ public class GameEditorFrame extends JFrame {
         refreshAllPanels();
     }
 
-+    private void installTabUndockHandler(JTabbedPane tabs) {
-+        tabs.addMouseListener(new MouseAdapter() {
-+            @Override
-+            public void mousePressed(MouseEvent e) {
-+                if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
-+                    int idx = tabs.indexAtLocation(e.getX(), e.getY());
-+                    if (idx >= 0) {
-+                        javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
-+                        javax.swing.JMenuItem undock = new javax.swing.JMenuItem("Undock Tab");
-+                        undock.addActionListener(ae -> undockTab(tabs, idx));
-+                        popup.add(undock);
-+                        popup.show(tabs, e.getX(), e.getY());
-+                    }
-+                }
-+            }
-+        });
-+    }
-+
-+    private void undockTab(JTabbedPane tabs, int index) {
-+        try {
-+            Component comp = tabs.getComponentAt(index);
-+            String title = tabs.getTitleAt(index);
-+            // remove from tabs
-+            tabs.remove(index);
-+
-+            JFrame frame = new JFrame(title);
-+            frame.getContentPane().add(comp);
-+            frame.pack();
-+            frame.setSize(Math.max(600, comp.getWidth()), Math.max(400, comp.getHeight()));
-+            frame.setLocationRelativeTo(this);
-+            frame.setVisible(true);
-+
-+            // track for re-docking
-+            undockedFrames.put(frame, new UndockedInfo(comp, title, index));
-+
-+            frame.addWindowListener(new WindowAdapter() {
-+                @Override
-+                public void windowClosing(WindowEvent e) {
-+                    // re-dock when the window is closed
-+                    reDockFrame(frame);
-+                }
-+            });
-+        } catch (Exception ex) {
-+            ex.printStackTrace();
-+        }
-+    }
-+
-+    private void reDockFrame(JFrame frame) {
-+        UndockedInfo info = undockedFrames.remove(frame);
-+        if (info == null) return;
-+        try {
-+            Component comp = info.component;
-+            String title = info.title;
-+            // add back to the main tabbed pane at end
-+            java.awt.Container content = comp.getParent();
-+            if (content != null) content.remove(comp);
-+            JTabbedPane tabs = findMainTabbedPane();
-+            if (tabs != null) {
-+                tabs.addTab(title, comp);
-+                tabs.setSelectedComponent(comp);
-+            }
-+            frame.dispose();
-+        } catch (Exception ex) {
-+            ex.printStackTrace();
-+        }
-+    }
-+
-+    private JTabbedPane findMainTabbedPane() {
-+        // main tabbed pane is the first JTabbedPane in the content hierarchy
-+        for (Component c : getContentPane().getComponents()) {
-+            if (c instanceof JTabbedPane) return (JTabbedPane) c;
-+        }
-+        return null;
-+    }
+    private void installTabUndockHandler(JTabbedPane tabs) {
+        tabs.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
+                    int idx = tabs.indexAtLocation(e.getX(), e.getY());
+                    if (idx >= 0) {
+                        javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
+                        javax.swing.JMenuItem undock = new javax.swing.JMenuItem("Undock Tab");
+                        undock.addActionListener(ae -> undockTab(tabs, idx));
+                        popup.add(undock);
+                        popup.show(tabs, e.getX(), e.getY());
+                    }
+                }
+            }
+        });
+    }
+
+    private void undockTab(JTabbedPane tabs, int index) {
+        try {
+            Component comp = tabs.getComponentAt(index);
+            String title = tabs.getTitleAt(index);
+            // remove from tabs
+            tabs.remove(index);
+
+            JFrame frame = new JFrame(title);
+            frame.getContentPane().add(comp);
+            frame.pack();
+            frame.setSize(Math.max(600, comp.getWidth()), Math.max(400, comp.getHeight()));
+            frame.setLocationRelativeTo(this);
+            frame.setVisible(true);
+
+            // track for re-docking
+            undockedFrames.put(frame, new UndockedInfo(comp, title, index));
+
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    // re-dock when the window is closed
+                    reDockFrame(frame);
+                }
+            });
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void reDockFrame(JFrame frame) {
+        UndockedInfo info = undockedFrames.remove(frame);
+        if (info == null) return;
+        try {
+            Component comp = info.component;
+            String title = info.title;
+            // add back to the main tabbed pane at end
+            java.awt.Container content = comp.getParent();
+            if (content != null) content.remove(comp);
+            JTabbedPane tabs = findMainTabbedPane();
+            if (tabs != null) {
+                tabs.addTab(title, comp);
+                tabs.setSelectedComponent(comp);
+            }
+            frame.dispose();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private JTabbedPane findMainTabbedPane() {
+        // main tabbed pane is the first JTabbedPane in the content hierarchy
+        for (Component c : getContentPane().getComponents()) {
+            if (c instanceof JTabbedPane) return (JTabbedPane) c;
+        }
+        return null;
+    }
 
     public static void showEditor() {
         SwingUtilities.invokeLater(() -> {
@@ -272,28 +273,28 @@ public class GameEditorFrame extends JFrame {
             }
         });
         window.add(dockAll);
-+
-+        javax.swing.JMenu layouts = new javax.swing.JMenu("Layouts");
-+        javax.swing.JMenuItem saveLayout = new javax.swing.JMenuItem("Save Layout");
-+        saveLayout.addActionListener(e -> {
-+            try {
-+                java.nio.file.Path out = java.nio.file.Path.of("build/editor_layout.json");
-+                java.nio.file.Files.createDirectories(out.getParent());
-+                java.util.Map<String,Object> m = new java.util.HashMap<>();
-+                m.put("undockedCount", undockedFrames.size());
-+                try (java.io.Writer w = java.nio.file.Files.newBufferedWriter(out)) {
-+                    w.write(m.toString());
-+                }
-+                javax.swing.JOptionPane.showMessageDialog(this, "Saved layout to " + out.toString());
-+            } catch (Exception ex) { javax.swing.JOptionPane.showMessageDialog(this, "Save layout error: " + ex.getMessage()); }
-+        });
-+        layouts.add(saveLayout);
-+        javax.swing.JMenuItem loadLayout = new javax.swing.JMenuItem("Load Layout");
-+        loadLayout.addActionListener(e -> {
-+            javax.swing.JOptionPane.showMessageDialog(this, "Layout loading is a placeholder (no-op) in this build.");
-+        });
-+        layouts.add(loadLayout);
-+        window.add(layouts);
+
+        javax.swing.JMenu layouts = new javax.swing.JMenu("Layouts");
+        javax.swing.JMenuItem saveLayout = new javax.swing.JMenuItem("Save Layout");
+        saveLayout.addActionListener(e -> {
+            try {
+                java.nio.file.Path out = java.nio.file.Path.of("build/editor_layout.json");
+                java.nio.file.Files.createDirectories(out.getParent());
+                java.util.Map<String,Object> m = new java.util.HashMap<>();
+                m.put("undockedCount", undockedFrames.size());
+                try (java.io.Writer w = java.nio.file.Files.newBufferedWriter(out)) {
+                    w.write(m.toString());
+                }
+                javax.swing.JOptionPane.showMessageDialog(this, "Saved layout to " + out.toString());
+            } catch (Exception ex) { javax.swing.JOptionPane.showMessageDialog(this, "Save layout error: " + ex.getMessage()); }
+        });
+        layouts.add(saveLayout);
+        javax.swing.JMenuItem loadLayout = new javax.swing.JMenuItem("Load Layout");
+        loadLayout.addActionListener(e -> {
+            javax.swing.JOptionPane.showMessageDialog(this, "Layout loading is a placeholder (no-op) in this build.");
+        });
+        layouts.add(loadLayout);
+        window.add(layouts);
 
         menuBar.add(window);
 
@@ -305,67 +306,55 @@ public class GameEditorFrame extends JFrame {
         });
         engine.add(runTick);
         menuBar.add(engine);
-+        javax.swing.JMenu help = new javax.swing.JMenu("Help");
-+        javax.swing.JMenuItem docs = new javax.swing.JMenuItem("Documentation");
-+        docs.addActionListener(e -> {
-+            EditorAPI.showDock();
-+            javax.swing.JOptionPane.showMessageDialog(this, "Documentation panel is available under Window->Panels or Docs tab.");
-+        });
-+        help.add(docs);
-+        javax.swing.JMenuItem about = new javax.swing.JMenuItem("About");
-+        about.addActionListener(e -> {
-+            javax.swing.JOptionPane.showMessageDialog(this, "Eldrion Legends Editor\nVersion: dev\nAuthor: Project Team");
-+        });
-+        help.add(about);
-+        menuBar.add(help);
-         return menuBar;
+        javax.swing.JMenu help = new javax.swing.JMenu("Help");
+        javax.swing.JMenuItem docs = new javax.swing.JMenuItem("Documentation");
+        docs.addActionListener(e -> {
+            EditorAPI.showDock();
+            javax.swing.JOptionPane.showMessageDialog(this, "Documentation panel is available under Window->Panels or Docs tab.");
+        });
+        help.add(docs);
+        javax.swing.JMenuItem about = new javax.swing.JMenuItem("About");
+        about.addActionListener(e -> {
+            javax.swing.JOptionPane.showMessageDialog(this, "Eldrion Legends Editor\nVersion: dev\nAuthor: Project Team");
+        });
+        help.add(about);
+        menuBar.add(help);
+        return menuBar;
     }
 
     private JTabbedPane buildMainTabs() {
         JTabbedPane tabs = new JTabbedPane();
--        tabs.addTab("Overview", buildOverviewPanel());
--        tabs.addTab("IDE", buildIdePanel());
--        tabs.addTab("Engine", buildEnginePanel());
--        tabs.addTab("Framework", buildFrameworkPanel());
--        tabs.addTab("Systems", buildSystemsPanel());
--        tabs.addTab("Map Design", buildMapDesignPanel());
--        tabs.addTab("Pixels", pixelEditorPanel);
--        tabs.addTab("Audio", audioEditorPanel);
--        tabs.addTab("Graphics", renderGraphicsEditorPanel);
--        tabs.addTab("Story", storySystemsEditorPanel);
--        tabs.addTab("Zones", buildZonesPanel());
--        tabs.addTab("Data", buildDataPanel());
-+        tabs.addTab("Overview", buildOverviewPanel());
-+        tabs.addTab("IDE", buildIdePanel());
-+        tabs.addTab("Engine", buildEnginePanel());
-+        tabs.addTab("Framework", buildFrameworkPanel());
-+        tabs.addTab("Systems", buildSystemsPanel());
-+        tabs.addTab("Map Design", buildMapDesignPanel());
-+        tabs.addTab("Pixels", pixelEditorPanel);
-+        tabs.addTab("Audio", audioEditorPanel);
-+        tabs.addTab("Graphics", renderGraphicsEditorPanel);
-+        tabs.addTab("Story", storySystemsEditorPanel);
-+        tabs.addTab("Zones", buildZonesPanel());
-+        tabs.addTab("Data", buildDataPanel());
-+        // New panels (Unreal-like editor windows)
-+        tabs.addTab("Content", new ContentBrowserPanel());
-+        tabs.addTab("Outliner", new WorldOutlinerPanel());
-+        tabs.addTab("Inspector", new InspectorPanelStub());
-+        tabs.addTab("Palette", tilePalettePanel);
-+        tabs.addTab("Animation", new AnimationPanel());
-+        tabs.addTab("Visual Scripting", new VisualScriptingPanelStub());
-+        tabs.addTab("Console", new ConsolePanel());
-+        tabs.addTab("Profiler", new ProfilerPanel());
-+        tabs.addTab("Audio Mixer", new AudioMixerPanel());
-+        tabs.addTab("Version Control", new VersionControlPanel());
-+        tabs.addTab("Docs", new DocsViewerPanel());
-         // Add entity editors as tabs
-         tabs.addTab("Monsters", monsterEditorPanel);
-         tabs.addTab("Items", itemEditorPanel);
-         tabs.addTab("Weapons", weaponEditorPanel);
-         tabs.addTab("Armor", armorEditorPanel);
-         return tabs;
-     }
+        tabs.addTab("Overview", buildOverviewPanel());
+        tabs.addTab("IDE", buildIdePanel());
+        tabs.addTab("Engine", buildEnginePanel());
+        tabs.addTab("Framework", buildFrameworkPanel());
+        tabs.addTab("Systems", buildSystemsPanel());
+        tabs.addTab("Map Design", buildMapDesignPanel());
+        tabs.addTab("Pixels", pixelEditorPanel);
+        tabs.addTab("Audio", audioEditorPanel);
+        tabs.addTab("Graphics", renderGraphicsEditorPanel);
+        tabs.addTab("Story", storySystemsEditorPanel);
+        tabs.addTab("Zones", buildZonesPanel());
+        tabs.addTab("Data", buildDataPanel());
+        // New panels (Unreal-like editor windows)
+        tabs.addTab("Content", new ContentBrowserPanel());
+        tabs.addTab("Outliner", new WorldOutlinerPanel());
+        tabs.addTab("Inspector", new InspectorPanelStub());
+        tabs.addTab("Palette", tilePalettePanel);
+        tabs.addTab("Animation", new AnimationPanel());
+        tabs.addTab("Visual Scripting", new VisualScriptingPanelStub());
+        tabs.addTab("Console", new ConsolePanel());
+        tabs.addTab("Profiler", new ProfilerPanel());
+        tabs.addTab("Audio Mixer", new AudioMixerPanel());
+        tabs.addTab("Version Control", new VersionControlPanel());
+        tabs.addTab("Docs", new DocsViewerPanel());
+        // Add entity editors as tabs
+        tabs.addTab("Monsters", monsterEditorPanel);
+        tabs.addTab("Items", itemEditorPanel);
+        tabs.addTab("Weapons", weaponEditorPanel);
+        tabs.addTab("Armor", armorEditorPanel);
+        return tabs;
+    }
 
     private JPanel buildIdePanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
@@ -535,6 +524,36 @@ public class GameEditorFrame extends JFrame {
         gridToggle.addActionListener(e -> mapCanvasPanel.setShowGrid(gridToggle.isSelected()));
         top.add(gridToggle);
 
+        top.add(new JLabel("Brush Size:"));
+        JSpinner brushSizeSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 9, 1));
+        brushSizeSpinner.addChangeListener(e -> mapCanvasPanel.setBrushSize((Integer) brushSizeSpinner.getValue()));
+        top.add(brushSizeSpinner);
+
+        JButton copySel = new JButton("Copy");
+        copySel.addActionListener(e -> {
+            mapCanvasPanel.copySelectionPublic();
+        });
+        top.add(copySel);
+
+        JButton pasteBtn = new JButton("Paste");
+        pasteBtn.addActionListener(e -> {
+            mapCanvasPanel.pasteClipboardPublic();
+            refreshMapDesignInfo();
+        });
+        top.add(pasteBtn);
+
+        JButton rotateBtn = new JButton("Rotate");
+        rotateBtn.addActionListener(e -> {
+            mapCanvasPanel.rotateClipboardCWPublic();
+        });
+        top.add(rotateBtn);
+
+        JButton flipBtn = new JButton("Flip H");
+        flipBtn.addActionListener(e -> {
+            mapCanvasPanel.flipClipboardHorizontalPublic();
+        });
+        top.add(flipBtn);
+
         JButton apply = new JButton("Apply");
         apply.addActionListener(e -> applyMapSelection());
         top.add(apply);
@@ -645,76 +664,75 @@ public class GameEditorFrame extends JFrame {
         refreshZonesPanel();
         refreshDataPanel();
         refreshSystemsPanel();
--        mapCanvasPanel.refresh();
-+        mapCanvasPanel.repaint();
-     }
-+
-+    // Build a compact Unreal-like toolbar for common editor actions
-+    private JToolBar buildToolBar() {
-+        JToolBar tb = new JToolBar();
-+        tb.setFloatable(false);
-+
-+        JButton save = new JButton("Save");
-+        save.addActionListener(e -> {
-+            // Use buildProject as a proxy for Save/Package in this skeleton
-+            String out = GameEditorRuntimeAPI.buildProject();
-+            JOptionPane.showMessageDialog(this, "Build result:\n" + out, "Save/Build", JOptionPane.INFORMATION_MESSAGE);
-+        });
-+        tb.add(save);
-+
-+        JButton undoBtn = new JButton("Undo");
-+        undoBtn.addActionListener(e -> {
-+            try { mapCanvasPanel.undo(); } catch (Exception ex) { ex.printStackTrace(); }
-+        });
-+        tb.add(undoBtn);
-+
-+        JButton redoBtn = new JButton("Redo");
-+        redoBtn.addActionListener(e -> {
-+            try { mapCanvasPanel.redo(); } catch (Exception ex) { ex.printStackTrace(); }
-+        });
-+        tb.add(redoBtn);
-+
-+        tb.addSeparator();
-+
-+        JButton play = new JButton("Play");
-+        play.addActionListener(e -> {
-+            // Run the project in editor (Play In Editor)
-+            GameEditorRuntimeAPI.runProject();
-+        });
-+        tb.add(play);
-+
-+        JButton simulate = new JButton("Simulate");
-+        simulate.addActionListener(e -> JOptionPane.showMessageDialog(this, "Simulate (placeholder)"));
-+        tb.add(simulate);
-+
-+        tb.addSeparator();
-+
-+        JToggleButton gridBtn = new JToggleButton("Grid", true);
-+        gridBtn.addActionListener(e -> mapCanvasPanel.setShowGrid(gridBtn.isSelected()));
-+        tb.add(gridBtn);
-+
-+        JToggleButton snapBtn = new JToggleButton("Snap", false);
-+        snapBtn.addActionListener(e -> {
-+            // For now just show status; future: wire snap to tools
-+            JOptionPane.showMessageDialog(this, "Snap: " + snapBtn.isSelected());
-+        });
-+        tb.add(snapBtn);
-+
-+        tb.addSeparator();
-+
-+        tb.add(new JLabel("Layout:"));
-+        JComboBox<String> layout = new JComboBox<>(new String[]{"Default", "2-Column", "Large-Preview"});
-+        layout.addActionListener(e -> JOptionPane.showMessageDialog(this, "Switch layout: " + layout.getSelectedItem()));
-+        tb.add(layout);
-+
-+        tb.addSeparator();
-+
-+        tb.add(new JLabel(" Search:"));
-+        JTextField search = new JTextField();
-+        search.setColumns(12);
-+        search.addActionListener(e -> JOptionPane.showMessageDialog(this, "Search: " + search.getText()));
-+        tb.add(search);
-+
-+        return tb;
-+    }
- }
+        mapCanvasPanel.repaint();
+    }
+
+    // Build a compact Unreal-like toolbar for common editor actions
+    private JToolBar buildToolBar() {
+        JToolBar tb = new JToolBar();
+        tb.setFloatable(false);
+
+        JButton save = new JButton("Save");
+        save.addActionListener(e -> {
+            // Use buildProject as a proxy for Save/Package in this skeleton
+            List<String> out = GameEditorRuntimeAPI.buildProject();
+            JOptionPane.showMessageDialog(this, "Build result:\n" + String.join("\n", out), "Save/Build", JOptionPane.INFORMATION_MESSAGE);
+        });
+        tb.add(save);
+
+        JButton undoBtn = new JButton("Undo");
+        undoBtn.addActionListener(e -> {
+            try { mapCanvasPanel.undo(); } catch (Exception ex) { ex.printStackTrace(); }
+        });
+        tb.add(undoBtn);
+
+        JButton redoBtn = new JButton("Redo");
+        redoBtn.addActionListener(e -> {
+            try { mapCanvasPanel.redo(); } catch (Exception ex) { ex.printStackTrace(); }
+        });
+        tb.add(redoBtn);
+
+        tb.addSeparator();
+
+        JButton play = new JButton("Play");
+        play.addActionListener(e -> {
+            // Run the project in editor (Play In Editor)
+            GameEditorRuntimeAPI.runProject();
+        });
+        tb.add(play);
+
+        JButton simulate = new JButton("Simulate");
+        simulate.addActionListener(e -> JOptionPane.showMessageDialog(this, "Simulate (placeholder)"));
+        tb.add(simulate);
+
+        tb.addSeparator();
+
+        JToggleButton gridBtn = new JToggleButton("Grid", true);
+        gridBtn.addActionListener(e -> mapCanvasPanel.setShowGrid(gridBtn.isSelected()));
+        tb.add(gridBtn);
+
+        JToggleButton snapBtn = new JToggleButton("Snap", false);
+        snapBtn.addActionListener(e -> {
+            // For now just show status; future: wire snap to tools
+            JOptionPane.showMessageDialog(this, "Snap: " + snapBtn.isSelected());
+        });
+        tb.add(snapBtn);
+
+        tb.addSeparator();
+
+        tb.add(new JLabel("Layout:"));
+        JComboBox<String> layout = new JComboBox<>(new String[]{"Default", "2-Column", "Large-Preview"});
+        layout.addActionListener(e -> JOptionPane.showMessageDialog(this, "Switch layout: " + layout.getSelectedItem()));
+        tb.add(layout);
+
+        tb.addSeparator();
+
+        tb.add(new JLabel(" Search:"));
+        JTextField search = new JTextField();
+        search.setColumns(12);
+        search.addActionListener(e -> JOptionPane.showMessageDialog(this, "Search: " + search.getText()));
+        tb.add(search);
+
+        return tb;
+    }
+}
