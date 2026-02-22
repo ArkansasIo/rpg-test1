@@ -11,6 +11,10 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,6 +71,9 @@ public class MapEditorCanvasPanel extends JPanel {
     private Map<Long, CellChange> activeStroke = null;
     private java.util.function.IntConsumer tilePickListener;
 
+    // audio attachments per cell (key: ((long)row<<32)|col)
+    private Map<Long, String> audioAttachments = new java.util.HashMap<>();
+
     public MapEditorCanvasPanel() {
         setBackground(new Color(24, 24, 26));
         java.awt.event.MouseAdapter painter = new java.awt.event.MouseAdapter() {
@@ -92,6 +99,47 @@ public class MapEditorCanvasPanel extends JPanel {
         };
         addMouseListener(painter);
         addMouseMotionListener(painter);
+
+        // enable file drop on canvas to attach audio to cell
+        new DropTarget(this, DnDConstants.ACTION_COPY_OR_MOVE, new java.awt.dnd.DropTargetListener() {
+            @Override
+            public void dragEnter(java.awt.dnd.DropTargetDragEvent dtde) { }
+
+            @Override
+            public void dragOver(java.awt.dnd.DropTargetDragEvent dtde) { }
+
+            @Override
+            public void dropActionChanged(java.awt.dnd.DropTargetDragEvent dtde) { }
+
+            @Override
+            public void dragExit(java.awt.dnd.DropTargetEvent dte) { }
+
+            @Override
+            public void drop(DropTargetDropEvent de) {
+                try {
+                    de.acceptDrop(DnDConstants.ACTION_COPY);
+                    @SuppressWarnings("unchecked")
+                    java.util.List<File> dropped = (java.util.List<File>) de.getTransferable().getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor);
+                    if (dropped != null && !dropped.isEmpty()) {
+                        java.awt.Point p = de.getLocation();
+                        int[] cell = mouseToCell(p.x, p.y);
+                        if (cell != null) {
+                            File f = dropped.get(0);
+                            String name = f.getName();
+                            // copy to assets/res/audio if not already there
+                            Path dest = Path.of("assets/res/audio").resolve(name);
+                            if (!Files.exists(dest)) Files.copy(f.toPath(), dest);
+                            setAudioAttachment(cell[0], cell[1], name);
+                            repaint();
+                        }
+                    }
+                    de.dropComplete(true);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    try { de.dropComplete(false);} catch (Exception ignored) {}
+                }
+            }
+        }, true);
     }
 
     public void setTilePickListener(java.util.function.IntConsumer tilePickListener) {
@@ -565,5 +613,24 @@ public class MapEditorCanvasPanel extends JPanel {
             g2.setColor(new Color(255, 215, 0, 140));
             g2.drawRect(hoverCol * tileSize, hoverRow * tileSize, tileSize, tileSize);
         }
+    }
+
+    public void setAudioAttachment(int row, int col, String fileName) {
+        long key = (((long) row) << 32) | (col & 0xffffffffL);
+        if (fileName == null || fileName.isEmpty()) {
+            audioAttachments.remove(key);
+        }
+        else {
+            audioAttachments.put(key, fileName);
+        }
+    }
+
+    public String getAudioAttachment(int row, int col) {
+        long key = (((long) row) << 32) | (col & 0xffffffffL);
+        return audioAttachments.get(key);
+    }
+
+    public Map<Long, String> getAudioAttachments() {
+        return audioAttachments;
     }
 }

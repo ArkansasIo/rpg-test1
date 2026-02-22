@@ -4,6 +4,9 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class AudioToolsPanel extends JPanel {
 
@@ -15,21 +18,37 @@ public class AudioToolsPanel extends JPanel {
 
     public AudioToolsPanel() {
         setLayout(new BorderLayout(8,8));
-        JPanel buttons = new JPanel(new GridLayout(0,2,4,4));
+
+        JPanel presets = new JPanel(new GridLayout(0,2,4,4));
         JButton magicBtn = new JButton("Generate Magic Pulse");
         JButton magicPlayBtn = new JButton("Play");
         JButton whooshBtn = new JButton("Generate Whoosh");
         JButton whooshPlayBtn = new JButton("Play");
         JButton sparkleBtn = new JButton("Generate Sparkle");
         JButton sparklePlayBtn = new JButton("Play");
-        buttons.add(magicBtn);
-        buttons.add(magicPlayBtn);
-        buttons.add(whooshBtn);
-        buttons.add(whooshPlayBtn);
-        buttons.add(sparkleBtn);
-        buttons.add(sparklePlayBtn);
+        presets.add(magicBtn);
+        presets.add(magicPlayBtn);
+        presets.add(whooshBtn);
+        presets.add(whooshPlayBtn);
+        presets.add(sparkleBtn);
+        presets.add(sparklePlayBtn);
 
-        add(buttons, BorderLayout.NORTH);
+        // SFX parameter controls
+        JPanel params = new JPanel(new GridLayout(0,2,4,4));
+        JSpinner freqSpinner = new JSpinner(new SpinnerNumberModel(440.0, 20.0, 20000.0, 1.0));
+        JSpinner durSpinner = new JSpinner(new SpinnerNumberModel(0.25, 0.01, 10.0, 0.01));
+        JSpinner ampSpinner = new JSpinner(new SpinnerNumberModel(0.6, 0.01, 1.0, 0.01));
+        JButton genPlayBtn = new JButton("Play Generated");
+        JButton savePresetBtn = new JButton("Save Preset");
+        params.add(new JLabel("Frequency (Hz):")); params.add(freqSpinner);
+        params.add(new JLabel("Duration (s):")); params.add(durSpinner);
+        params.add(new JLabel("Amplitude (0-1):")); params.add(ampSpinner);
+        params.add(genPlayBtn); params.add(savePresetBtn);
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(presets, BorderLayout.NORTH);
+        top.add(params, BorderLayout.SOUTH);
+        add(top, BorderLayout.NORTH);
 
         JTextArea log = new JTextArea(10, 40);
         log.setEditable(false);
@@ -79,7 +98,7 @@ public class AudioToolsPanel extends JPanel {
                 log.append("No generated sound yet. Click Generate first.\n");
                 return;
             }
-            playBytes(lastGenerated[0], DEFAULT_SAMPLE_RATE, log);
+            AudioPlaybackUtil.playBytes(lastGenerated[0], DEFAULT_SAMPLE_RATE);
         });
 
         whooshPlayBtn.addActionListener(e -> {
@@ -87,7 +106,7 @@ public class AudioToolsPanel extends JPanel {
                 log.append("No generated sound yet. Click Generate first.\n");
                 return;
             }
-            playBytes(lastGenerated[1], DEFAULT_SAMPLE_RATE, log);
+            AudioPlaybackUtil.playBytes(lastGenerated[1], DEFAULT_SAMPLE_RATE);
         });
 
         sparklePlayBtn.addActionListener(e -> {
@@ -95,7 +114,35 @@ public class AudioToolsPanel extends JPanel {
                 log.append("No generated sound yet. Click Generate first.\n");
                 return;
             }
-            playBytes(lastGenerated[2], DEFAULT_SAMPLE_RATE, log);
+            AudioPlaybackUtil.playBytes(lastGenerated[2], DEFAULT_SAMPLE_RATE);
+        });
+
+        genPlayBtn.addActionListener(e -> {
+            double freq = ((Number) freqSpinner.getValue()).doubleValue();
+            double dur = ((Number) durSpinner.getValue()).doubleValue();
+            double amp = ((Number) ampSpinner.getValue()).doubleValue();
+            byte[] pcm = SfxGenerator.generateSine(freq, dur, DEFAULT_SAMPLE_RATE, amp);
+            AudioPlaybackUtil.playBytes(pcm, DEFAULT_SAMPLE_RATE);
+            log.append(String.format("Played generated: freq=%.2f dur=%.2f amp=%.2f\n", freq, dur, amp));
+        });
+
+        savePresetBtn.addActionListener(e -> {
+            String name = JOptionPane.showInputDialog(this, "Enter preset name:");
+            if (name == null || name.trim().isEmpty()) return;
+            double freq = ((Number) freqSpinner.getValue()).doubleValue();
+            double dur = ((Number) durSpinner.getValue()).doubleValue();
+            double amp = ((Number) ampSpinner.getValue()).doubleValue();
+            try {
+                Path presetDir = Path.of("assets/res/audio/presets");
+                if (!Files.exists(presetDir)) Files.createDirectories(presetDir);
+                Path json = presetDir.resolve(name + ".json");
+                String content = String.format("{\"freq\":%f,\"duration\":%f,\"amplitude\":%f}", freq, dur, amp);
+                Files.writeString(json, content);
+                EditorAudioAPI.registerPreset(name, json);
+                log.append("Saved preset: " + json.toAbsolutePath() + "\n");
+            } catch (IOException ioe) {
+                log.append("Error saving preset: " + ioe.getMessage() + "\n");
+            }
         });
 
         // Quick playback of existing files in the assets folder via file chooser
@@ -112,85 +159,14 @@ public class AudioToolsPanel extends JPanel {
             if (r == JFileChooser.APPROVE_OPTION) {
                 File f = chooser.getSelectedFile();
                 try {
-                    AudioInputStream ais = AudioSystem.getAudioInputStream(f);
-                    byte[] buf = ais.readAllBytes();
-                    // prefer using AudioSystem playback for files (handles format)
-                    playAudioStream(ais, log);
+                    AudioPlaybackUtil.playFile(f);
                 } catch (Exception ex) {
                     log.append("Error playing file: " + ex.getMessage() + "\n");
                 }
             }
         });
 
-        stopBtn.addActionListener(e -> stopPlayback());
-    }
-
-    private void playBytes(byte[] pcm, float sampleRate, JTextArea log) {
-        new Thread(() -> {
-            try {
-                stopPlayback();
-                AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
-                DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
-                currentLine = (SourceDataLine) AudioSystem.getLine(info);
-                currentLine.open(format);
-                currentLine.start();
-                playing = true;
-                int written = 0;
-                int bufferSize = 4096;
-                while (playing && written < pcm.length) {
-                    int toWrite = Math.min(bufferSize, pcm.length - written);
-                    currentLine.write(pcm, written, toWrite);
-                    written += toWrite;
-                }
-                currentLine.drain();
-                currentLine.stop();
-                currentLine.close();
-                playing = false;
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> log.append("Playback error: " + ex.getMessage() + "\n"));
-            }
-        }, "AudioPlayThread").start();
-    }
-
-    private void playAudioStream(AudioInputStream ais, JTextArea log) {
-        new Thread(() -> {
-            try {
-                stopPlayback();
-                AudioFormat baseFormat = ais.getFormat();
-                AudioFormat decoded = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
-                        baseFormat.getSampleRate(), 16, baseFormat.getChannels(),
-                        baseFormat.getChannels() * 2, baseFormat.getSampleRate(), false);
-                AudioInputStream din = AudioSystem.getAudioInputStream(decoded, ais);
-                DataLine.Info info = new DataLine.Info(SourceDataLine.class, decoded);
-                currentLine = (SourceDataLine) AudioSystem.getLine(info);
-                currentLine.open(decoded);
-                currentLine.start();
-                playing = true;
-                byte[] buffer = new byte[4096];
-                int n = 0;
-                while ((n = din.read(buffer, 0, buffer.length)) > 0 && playing) {
-                    currentLine.write(buffer, 0, n);
-                }
-                currentLine.drain();
-                currentLine.stop();
-                currentLine.close();
-                din.close();
-                ais.close();
-                playing = false;
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> log.append("Playback error: " + ex.getMessage() + "\n"));
-            }
-        }, "AudioFilePlayThread").start();
-    }
-
-    private void stopPlayback() {
-        playing = false;
-        try {
-            if (currentLine != null && currentLine.isOpen()) {
-                currentLine.stop();
-                currentLine.close();
-            }
-        } catch (Exception ignored) {}
+        stopBtn.addActionListener(e -> AudioPlaybackUtil.stop());
     }
 
     private File ensureAudioFolder() {
