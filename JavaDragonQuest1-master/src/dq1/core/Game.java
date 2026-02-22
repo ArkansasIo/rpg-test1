@@ -21,7 +21,11 @@ import mmorpg.entities.FantasyEntityCatalog;
 import mmorpg.entities.FantasyEntityGroup;
 import mmorpg.entities.FantasyEntityProfile;
 import mmorpg.framework.FrameworkGameplayService;
+import mmorpg.game.ClassSpecializationTree;
+import mmorpg.game.CraftingSystem;
+import mmorpg.game.DungeonFinderQueue;
 import mmorpg.game.FeatureRegistry;
+import mmorpg.game.PartySyncService;
 import mmorpg.ui.DiabloInventoryFrame;
 import mmorpg.ui.WowMapCatalogFrame;
 import mmorpg.ui.WowUiFrame;
@@ -144,6 +148,10 @@ public class Game {
         Inventory.start();
         Quest.initializeWoWStoryIfNeeded();
         RpgSystems.bootstrap();
+        ClassSpecializationTree.initializeDefaults();
+        CraftingSystem.initializeDefaults();
+        DungeonFinderQueue.reset();
+        PartySyncService.initializeDefaults(Player.getName(), Player.getLV(), "world");
         try {
             WoWZoneSystem.loadFromInfAssets(Path.of("assets", "res", "inf"));
         }
@@ -2186,11 +2194,15 @@ public class Game {
                 "RPG Runtime Actions",
                 "Fantasy Entity Catalog (600)",
                 "Combat Framework Demo",
+                "Class Specializations",
                 "Talent Progression",
+                "Crafting Professions",
+                "Dungeon Finder Queue",
+                "Party Sync / Raid Logic",
                 "Feature Coverage",
                 "Back"
             };
-            int option = Dialog.showOptionsMenu(9, 10, 30, 11, -1, options);
+            int option = Dialog.showOptionsMenu(9, 10, 31, 14, -1, options);
             switch (option) {
                 case 0:
                     showRpgCharacterSummary();
@@ -2211,12 +2223,24 @@ public class Game {
                     showCombatFrameworkDemoMenu();
                     break;
                 case 6:
-                    showTalentProgressionMenu();
+                    showClassSpecializationMenu();
                     break;
                 case 7:
-                    showFeatureCoverage();
+                    showTalentProgressionMenu();
                     break;
                 case 8:
+                    showCraftingMenu();
+                    break;
+                case 9:
+                    showDungeonFinderMenu();
+                    break;
+                case 10:
+                    showPartySyncMenu();
+                    break;
+                case 11:
+                    showFeatureCoverage();
+                    break;
+                case 12:
                 case -1:
                     exit = true;
                     break;
@@ -2275,7 +2299,12 @@ public class Game {
         lines.add("Slot 3 key: " + keyName(Settings.KEY_WOW_HOTBAR_3));
         lines.add("Slot 4 key: " + keyName(Settings.KEY_WOW_HOTBAR_4));
         lines.add("Slot 5 key: " + keyName(Settings.KEY_WOW_HOTBAR_5));
-        lines.addAll(RpgSystems.getRuntime().buildHotbarLines().subList(0, 5));
+        lines.add("Slot 6 key: " + keyName(Settings.KEY_WOW_HOTBAR_6));
+        lines.add("Slot 7 key: " + keyName(Settings.KEY_WOW_HOTBAR_7));
+        lines.add("Slot 8 key: " + keyName(Settings.KEY_WOW_HOTBAR_8));
+        lines.add("Slot 9 key: " + keyName(Settings.KEY_WOW_HOTBAR_9));
+        lines.add("Slot 10 key: " + keyName(Settings.KEY_WOW_HOTBAR_10));
+        lines.addAll(RpgSystems.getRuntime().buildHotbarLines());
         showSimplePanel(model.getTitle(), lines);
     }
 
@@ -2696,6 +2725,162 @@ public class Game {
                 break;
         }
         RpgSystems.getRuntime().exportToGlobals();
+    }
+
+    private static void showClassSpecializationMenu() {
+        CharacterClass clazz = RpgSystems.getProfile().getCharacterClass();
+        List<ClassSpecializationTree.Specialization> specs
+                = ClassSpecializationTree.getSpecializations(clazz);
+        List<String> lines = new ArrayList<>();
+        lines.addAll(ClassSpecializationTree.buildClassLines(clazz));
+        if (!specs.isEmpty()) {
+            ClassSpecializationTree.Specialization firstLocked = null;
+            for (ClassSpecializationTree.Specialization spec : specs) {
+                if (!ClassSpecializationTree.isUnlocked(spec.id)) {
+                    firstLocked = spec;
+                    break;
+                }
+            }
+            if (firstLocked != null && ClassSpecializationTree.unlockSpec(firstLocked.id)) {
+                lines.add("Unlocked: " + firstLocked.name);
+                lines.add(firstLocked.description);
+            }
+            else {
+                lines.add("All specs unlocked for this class.");
+            }
+        }
+        showSimplePanel("CLASS SPECIALIZATION", lines);
+    }
+
+    private static void showCraftingMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Crafting Summary",
+                "Craft Healing Potion",
+                "Craft Iron Longsword",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 9, 31, 6, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("CRAFTING", CraftingSystem.buildSummaryLines());
+                    break;
+                case 1:
+                    showUiToast(CraftingSystem.craftByRecipeId(101).message);
+                    break;
+                case 2:
+                    showUiToast(CraftingSystem.craftByRecipeId(201).message);
+                    break;
+                case 3:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void showDungeonFinderMenu() {
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "Queue as Tank",
+                "Queue as Healer",
+                "Queue as DPS",
+                "View Queue",
+                "Try Build Group",
+                "Leave Queue",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 8, 31, 9, -1, options);
+            switch (option) {
+                case 0:
+                    queuePlayerForDungeon(DungeonFinderQueue.Role.TANK);
+                    break;
+                case 1:
+                    queuePlayerForDungeon(DungeonFinderQueue.Role.HEALER);
+                    break;
+                case 2:
+                    queuePlayerForDungeon(DungeonFinderQueue.Role.DPS);
+                    break;
+                case 3:
+                    showSimplePanel("DUNGEON FINDER", DungeonFinderQueue.buildQueueLines());
+                    break;
+                case 4:
+                    DungeonFinderQueue.MatchGroup match = DungeonFinderQueue.tryCreateMatch();
+                    if (match == null) {
+                        showUiToast("Not enough roles to form a group.");
+                    }
+                    else {
+                        List<String> lines = new ArrayList<>();
+                        lines.add("Group ready:");
+                        for (DungeonFinderQueue.QueueEntry member : match.members) {
+                            lines.add("- " + member.playerName + " [" + member.role + "]");
+                        }
+                        showSimplePanel("DUNGEON GROUP", lines);
+                    }
+                    break;
+                case 5:
+                    if (DungeonFinderQueue.leaveQueue(Player.getName())) {
+                        showUiToast("Left dungeon queue.");
+                    }
+                    else {
+                        showUiToast("Player was not queued.");
+                    }
+                    break;
+                case 6:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+
+    private static void queuePlayerForDungeon(DungeonFinderQueue.Role role) {
+        boolean joined = DungeonFinderQueue.enqueue(Player.getName(), Player.getLV(), role);
+        if (joined) {
+            showUiToast("Joined queue as " + role + ".");
+        }
+        else {
+            showUiToast("Already in queue.");
+        }
+    }
+
+    private static void showPartySyncMenu() {
+        Object mapNameObj = Script.getGlobalValue("$$current_map_id");
+        String mapId = mapNameObj == null ? "world" : mapNameObj.toString();
+        boolean exit = false;
+        while (!exit) {
+            String[] options = new String[] {
+                "View Party Sync",
+                "Sync Levels to Leader",
+                "Sync Party to Current Map",
+                "Toggle Alyra Online",
+                "Back"
+            };
+            int option = Dialog.showOptionsMenu(8, 9, 31, 7, -1, options);
+            switch (option) {
+                case 0:
+                    showSimplePanel("PARTY SYNC", PartySyncService.buildSummaryLines());
+                    break;
+                case 1:
+                    PartySyncService.syncLevelsToLeader();
+                    showUiToast("Synced party levels to leader.");
+                    break;
+                case 2:
+                    PartySyncService.syncAllToMap(mapId);
+                    showUiToast("Synced online members to map: " + mapId);
+                    break;
+                case 3:
+                    PartySyncService.toggleOnline("Alyra");
+                    showUiToast("Toggled Alyra online state.");
+                    break;
+                case 4:
+                case -1:
+                    exit = true;
+                    break;
+            }
+        }
     }
 
     private static RpgActionResult equipFirstAvailableGear(RpgRuntimeService runtime) {

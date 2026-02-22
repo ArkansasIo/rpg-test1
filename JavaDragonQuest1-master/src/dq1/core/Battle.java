@@ -205,9 +205,6 @@ public class Battle {
             else if (Player.getHP() <= 0) {
                 Player.kill();
                 battleResult = 0;
-                
-                // TODO player is dead. Revive and teleport to Tantegel King
-                
                 break;
             }
         }

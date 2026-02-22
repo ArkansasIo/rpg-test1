@@ -51,17 +51,17 @@ public final class FeatureRegistry {
         list.add(new FeatureEntry("Turn-based combat", Status.IMPLEMENTED, "dq1"));
         list.add(new FeatureEntry("Inventory and equipment", Status.IMPLEMENTED, "dq1/rpg"));
         list.add(new FeatureEntry("Buff/debuff runtime effects", Status.PARTIAL, "rpg"));
-        list.add(new FeatureEntry("Class specialization trees", Status.MISSING, "mmorpg"));
+        list.add(new FeatureEntry("Class specialization trees", Status.IMPLEMENTED, "mmorpg"));
         list.add(new FeatureEntry("Multiplayer networking", Status.MISSING, "mmorpg"));
         list.add(new FeatureEntry("Guild and social backend", Status.MISSING, "mmorpg"));
         list.add(new FeatureEntry("Auction house economy", Status.MISSING, "mmorpg"));
-        list.add(new FeatureEntry("Party sync and raid logic", Status.PARTIAL, "ui/game"));
+        list.add(new FeatureEntry("Party sync and raid logic", Status.IMPLEMENTED, "ui/game"));
         list.add(new FeatureEntry("Map catalog with biome/tile details", Status.IMPLEMENTED, "world/ui"));
         list.add(new FeatureEntry("Graphical world map browser", Status.IMPLEMENTED, "ui"));
-        list.add(new FeatureEntry("Hotbar keybind integration", Status.PARTIAL, "dq1"));
-        list.add(new FeatureEntry("Talent/passive build planner", Status.MISSING, "mmorpg"));
-        list.add(new FeatureEntry("Crafting professions", Status.MISSING, "mmorpg"));
-        list.add(new FeatureEntry("Dungeon finder queue", Status.MISSING, "mmorpg"));
+        list.add(new FeatureEntry("Hotbar keybind integration", Status.IMPLEMENTED, "dq1"));
+        list.add(new FeatureEntry("Talent/passive build planner", Status.IMPLEMENTED, "mmorpg"));
+        list.add(new FeatureEntry("Crafting professions", Status.IMPLEMENTED, "mmorpg"));
+        list.add(new FeatureEntry("Dungeon finder queue", Status.IMPLEMENTED, "mmorpg"));
         return Collections.unmodifiableList(list);
     }
 
